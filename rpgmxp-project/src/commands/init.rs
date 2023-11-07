@@ -1,10 +1,12 @@
+mod scripts;
+
+use self::scripts::Script;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
-use flate2::bufread::ZlibDecoder;
 use std::collections::HashSet;
 use std::fmt::Write;
-use std::io::Read;
+use std::path::Path;
 use std::path::PathBuf;
 
 #[derive(Debug, argh::FromArgs)]
@@ -21,15 +23,19 @@ pub struct Options {
 }
 
 pub fn exec(options: Options) -> anyhow::Result<()> {
-    let data_path = options.from.join("Data");
-    let graphics_path = options.from.join("Graphics");
+    copy_data(&options.from, &options.output)?;
+    copy_graphics(&options.from, &options.output)?;
+    Ok(())
+}
 
+fn copy_data(base_in_path: &Path, base_out_path: &Path) -> anyhow::Result<()> {
+    let data_path = base_in_path.join("Data");
     ensure!(
         data_path.exists(),
         "missing folder at \"{}\"",
         data_path.display()
     );
-    let out_dir = options.output.join("Data");
+    let out_dir = base_out_path.join("Data");
     for entry in std::fs::read_dir(data_path)? {
         let entry = entry?;
 
@@ -44,79 +50,26 @@ pub fn exec(options: Options) -> anyhow::Result<()> {
         #[allow(clippy::single_match)]
         match file_stem.to_str() {
             Some("Scripts") => {
-                let scripts_data = std::fs::read(in_path)?;
-                let value_arena = ruby_marshal::load(&*scripts_data)?;
-                let mut visited_values = HashSet::new();
-
                 let out_dir = out_dir.join("Scripts");
                 std::fs::create_dir_all(&out_dir)?;
-
-                let script_list = match value_arena
-                    .get(value_arena.root())
-                    .context("invalid handle")?
-                {
-                    ruby_marshal::Value::Array(value) => value,
-                    _ => bail!("script list was not an array"),
-                };
-
-                for (script_index, handle) in script_list.value().iter().enumerate() {
-                    let script = match value_arena.get(*handle).context("invalid handle")? {
-                        ruby_marshal::Value::Array(value) => value.value(),
-                        _ => bail!("script was not an array"),
-                    };
-                    ensure!(script.len() == 3);
-
-                    let _script_id: i32 = ruby_marshal::FromValue::from_value(
-                        &value_arena,
-                        script[0],
-                        &mut visited_values,
-                    )?;
-                    let script_name: &ruby_marshal::StringValue =
-                        ruby_marshal::FromValue::from_value(
-                            &value_arena,
-                            script[1],
-                            &mut visited_values,
-                        )?;
-                    let script_name = std::str::from_utf8(script_name.value())?;
-                    let script_data: &ruby_marshal::StringValue =
-                        ruby_marshal::FromValue::from_value(
-                            &value_arena,
-                            script[2],
-                            &mut visited_values,
-                        )?;
-                    let mut decoder = ZlibDecoder::new(script_data.value());
-                    let mut script_data = String::new();
-                    decoder.read_to_string(&mut script_data)?;
-
-                    let mut escaped_script_name = String::with_capacity(script_name.len());
-                    for c in script_name.chars() {
-                        match c {
-                            '%' | ':' => {
-                                let c = u32::from(c);
-                                write!(&mut escaped_script_name, "%{c:x}")?;
-                            }
-                            _ => {
-                                escaped_script_name.push(c);
-                            }
-                        }
-                    }
-
-                    let out_path = out_dir.join(format!("{script_index}-{escaped_script_name}.rb"));
-                    std::fs::write(&out_path, script_data)?;
-                }
+                extract_scripts(&in_path, &out_dir)?;
             }
             _ => {}
         }
     }
 
-    // todo!();
+    Ok(())
+}
+
+fn copy_graphics(base_in_path: &Path, base_out_path: &Path) -> anyhow::Result<()> {
+    let graphics_path = base_in_path.join("Graphics");
 
     ensure!(
         graphics_path.exists(),
         "missing folder at \"{}\"",
         graphics_path.display()
     );
-    let out_dir = options.output.join("Graphics");
+    let out_dir = base_out_path.join("Graphics");
     for entry in std::fs::read_dir(graphics_path)? {
         let entry = entry?;
 
@@ -148,4 +101,46 @@ pub fn exec(options: Options) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn extract_scripts(in_path: &Path, out_dir: &Path) -> anyhow::Result<()> {
+    let scripts_data = std::fs::read(in_path)?;
+    let value_arena = ruby_marshal::load(&*scripts_data)?;
+    let mut visited_values = HashSet::new();
+
+    let script_list = match value_arena
+        .get(value_arena.root())
+        .context("invalid handle")?
+    {
+        ruby_marshal::Value::Array(value) => value,
+        _ => bail!("script list was not an array"),
+    };
+
+    for (script_index, handle) in script_list.value().iter().enumerate() {
+        let script: Script =
+            ruby_marshal::FromValue::from_value(&value_arena, *handle, &mut visited_values)?;
+
+        let escaped_script_name = escape_file_name(&script.name);
+
+        let out_path = out_dir.join(format!("{script_index}-{escaped_script_name}.rb"));
+        std::fs::write(&out_path, script.data)?;
+    }
+
+    Ok(())
+}
+
+fn escape_file_name(file_name: &str) -> String {
+    let mut escaped = String::with_capacity(file_name.len());
+    for c in file_name.chars() {
+        match c {
+            '%' | ':' => {
+                let c = u32::from(c);
+                write!(&mut escaped, "%{c:x}").unwrap();
+            }
+            _ => {
+                escaped.push(c);
+            }
+        }
+    }
+    escaped
 }
