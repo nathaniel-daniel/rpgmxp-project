@@ -59,7 +59,7 @@ dependencies = [
 
 [[package]]
 name = "rpgmxp-project"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "argh",
@@ -67,7 +67,7 @@ dependencies = [
 
 [[package]]
 name = "rpgmxp-types"
-version = "0.1.0"
+version = "0.0.0"
 
 [[package]]
 name = "serde"
