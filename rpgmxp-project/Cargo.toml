@@ -7,3 +7,5 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 anyhow = "1.0.75"
 argh = "0.1.12"
+flate2 = "1.0.28"
+ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs", branch = "convert" }
