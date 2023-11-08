@@ -1,5 +1,7 @@
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueError;
+use ruby_marshal::IntoValue;
+use ruby_marshal::IntoValueError;
 use ruby_marshal::ObjectValue;
 use ruby_marshal::StringValue;
 use ruby_marshal::ValueArena;
@@ -107,5 +109,28 @@ impl<'a> FromValue<'a> for AudioFile {
             name: name.into(),
             pitch,
         })
+    }
+}
+
+impl IntoValue for AudioFile {
+    fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
+        let object_name = arena.create_symbol(OBJECT_NAME.into());
+
+        let volume_field_key = arena.create_symbol(VOLUME_FIELD.into());
+        let name_field_key = arena.create_symbol(NAME_FIELD.into());
+        let pitch_field_key = arena.create_symbol(PITCH_FIELD.into());
+
+        let volume_field_value = self.volume.into_value(arena)?;
+        let name_field_value = arena.create_string(self.name.into());
+        let pitch_field_value = self.pitch.into_value(arena)?;
+
+        let instance_variables = vec![
+            (volume_field_key, volume_field_value),
+            (name_field_key, name_field_value.into()),
+            (pitch_field_key, pitch_field_value),
+        ];
+        let object = arena.create_object(object_name, instance_variables);
+
+        Ok(object.into())
     }
 }
