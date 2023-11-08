@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use flate2::bufread::ZlibDecoder;
 use std::collections::HashSet;
 use std::io::Read;
@@ -17,28 +16,10 @@ impl<'a> ruby_marshal::FromValue<'a> for Script {
         handle: ruby_marshal::ValueHandle,
         visited: &mut HashSet<ruby_marshal::ValueHandle>,
     ) -> Result<Self, ruby_marshal::FromValueError> {
-        let script: &ruby_marshal::ArrayValue =
+        let script: rpgmxp_types::Script =
             ruby_marshal::FromValue::from_value(arena, handle, visited)?;
-        let script = script.value();
 
-        if script.len() != 3 {
-            return Err(ruby_marshal::FromValueError::Other {
-                error: anyhow!("script data array len is not 3").into(),
-            });
-        }
-
-        let id: i32 = ruby_marshal::FromValue::from_value(arena, script[0], visited)?;
-        let name: &ruby_marshal::StringValue =
-            ruby_marshal::FromValue::from_value(arena, script[1], visited)?;
-        let name = std::str::from_utf8(name.value()).map_err(|error| {
-            ruby_marshal::FromValueError::Other {
-                error: error.into(),
-            }
-        })?;
-        let data: &ruby_marshal::StringValue =
-            ruby_marshal::FromValue::from_value(arena, script[2], visited)?;
-        let data = data.value();
-        let mut decoder = ZlibDecoder::new(data);
+        let mut decoder = ZlibDecoder::new(&*script.data);
         let mut data = String::new();
         decoder
             .read_to_string(&mut data)
@@ -47,8 +28,8 @@ impl<'a> ruby_marshal::FromValue<'a> for Script {
             })?;
 
         Ok(Self {
-            id,
-            name: name.into(),
+            id: script.id,
+            name: script.name,
             data,
         })
     }
