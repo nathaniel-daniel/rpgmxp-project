@@ -6,3 +6,4 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs", branch = "convert" }
+serde = { version = "1.0.192", features = ["derive"] }

@@ -144,12 +144,13 @@ name = "rpgmxp-types"
 version = "0.0.0"
 dependencies = [
  "ruby-marshal",
+ "serde",
 ]
 
 [[package]]
 name = "ruby-marshal"
 version = "0.0.0"
-source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs?branch=convert#337cd2cfa631066d177f4c032af6bf551268ad35"
+source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs?branch=convert#735086d6cb5096b42009c50619fe182e3a873e60"
 dependencies = [
  "generational-arena",
  "indexmap",
