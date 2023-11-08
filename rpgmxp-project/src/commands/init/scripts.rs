@@ -3,6 +3,31 @@ use std::collections::HashSet;
 use std::io::Read;
 
 #[derive(Debug)]
+pub struct ScriptList {
+    pub scripts: Vec<Script>,
+}
+
+impl<'a> ruby_marshal::FromValue<'a> for ScriptList {
+    fn from_value(
+        arena: &'a ruby_marshal::ValueArena,
+        handle: ruby_marshal::ValueHandle,
+        visited: &mut HashSet<ruby_marshal::ValueHandle>,
+    ) -> Result<Self, ruby_marshal::FromValueError> {
+        let array: &ruby_marshal::ArrayValue =
+            ruby_marshal::FromValue::from_value(arena, handle, visited)?;
+        let array = array.value();
+
+        let mut scripts = Vec::with_capacity(array.len());
+        for handle in array {
+            let script: Script = ruby_marshal::FromValue::from_value(arena, *handle, visited)?;
+            scripts.push(script);
+        }
+
+        Ok(Self { scripts })
+    }
+}
+
+#[derive(Debug)]
 pub struct Script {
     #[allow(dead_code)]
     pub id: i32,

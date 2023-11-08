@@ -1,7 +1,6 @@
 mod scripts;
 
-use self::scripts::Script;
-use anyhow::bail;
+use self::scripts::ScriptList;
 use anyhow::ensure;
 use anyhow::Context;
 use std::collections::HashSet;
@@ -108,22 +107,14 @@ fn extract_scripts(in_path: &Path, out_dir: &Path) -> anyhow::Result<()> {
     let value_arena = ruby_marshal::load(&*scripts_data)?;
     let mut visited_values = HashSet::new();
 
-    let script_list = match value_arena
-        .get(value_arena.root())
-        .context("invalid handle")?
-    {
-        ruby_marshal::Value::Array(value) => value,
-        _ => bail!("script list was not an array"),
-    };
+    let script_list: ScriptList =
+        ruby_marshal::FromValue::from_value(&value_arena, value_arena.root(), &mut visited_values)?;
 
-    for (script_index, handle) in script_list.value().iter().enumerate() {
-        let script: Script =
-            ruby_marshal::FromValue::from_value(&value_arena, *handle, &mut visited_values)?;
-
+    for (script_index, script) in script_list.scripts.iter().enumerate() {
         let escaped_script_name = escape_file_name(&script.name);
 
         let out_path = out_dir.join(format!("{script_index}-{escaped_script_name}.rb"));
-        std::fs::write(&out_path, script.data)?;
+        std::fs::write(&out_path, &script.data)?;
     }
 
     Ok(())
