@@ -1,7 +1,8 @@
 use crate::EventCommandParameter;
-use ruby_marshal::ArrayValue;
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueError;
+use ruby_marshal::IntoValue;
+use ruby_marshal::IntoValueError;
 use ruby_marshal::ObjectValue;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
@@ -63,15 +64,7 @@ impl<'a> FromValue<'a> for EventCommand {
                         });
                     }
 
-                    let array: &ArrayValue = FromValue::from_value(arena, value, visited)?;
-
-                    let mut parameters = Vec::with_capacity(array.len());
-                    for parameter in array.value().iter().copied() {
-                        parameters.push(EventCommandParameter::from_value(
-                            arena, parameter, visited,
-                        )?);
-                    }
-                    parameters_field = Some(parameters);
+                    parameters_field = Some(FromValue::from_value(arena, value, visited)?);
                 }
                 CODE_FIELD => {
                     if code_field.is_some() {
@@ -113,5 +106,29 @@ impl<'a> FromValue<'a> for EventCommand {
             indent,
             code,
         })
+    }
+}
+
+impl IntoValue for EventCommand {
+    fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
+        let object_name = arena.create_symbol(OBJECT_NAME.into());
+
+        let parameters_field_key = arena.create_symbol(PARAMETERS_FIELD.into());
+        let code_field_key = arena.create_symbol(CODE_FIELD.into());
+        let indent_field_key = arena.create_symbol(INDENT_FIELD.into());
+
+        let parameters_field_value = self.parameters.into_value(arena)?;
+        let code_field_value = self.code.into_value(arena)?;
+        let indent_field_value = self.indent.into_value(arena)?;
+
+        let fields = vec![
+            (parameters_field_key, parameters_field_value),
+            (code_field_key, code_field_value),
+            (indent_field_key, indent_field_value),
+        ];
+
+        let object = arena.create_object(object_name, fields);
+
+        Ok(object.into())
     }
 }
