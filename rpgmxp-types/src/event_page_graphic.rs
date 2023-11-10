@@ -147,24 +147,26 @@ impl<'a> FromValue<'a> for EventPageGraphic {
             name: OPACITY_FIELD.into(),
         })?;
         let character_name =
-            character_name_field.ok_or(FromValueError::MissingInstanceVariable {
+            character_name_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
                 name: CHARACTER_NAME_FIELD.into(),
             })?;
-        let pattern = pattern_field.ok_or(FromValueError::MissingInstanceVariable {
+        let pattern = pattern_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
             name: PATTERN_FIELD.into(),
         })?;
-        let tile_id = tile_id_field.ok_or(FromValueError::MissingInstanceVariable {
+        let tile_id = tile_id_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
             name: TILE_ID_FIELD.into(),
         })?;
-        let direction = direction_field.ok_or(FromValueError::MissingInstanceVariable {
+        let direction = direction_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
             name: DIRECTION_FIELD.into(),
         })?;
-        let blend_type = blend_type_field.ok_or(FromValueError::MissingInstanceVariable {
-            name: BLEND_TYPE_FIELD.into(),
-        })?;
-        let character_hue = character_hue_field.ok_or(FromValueError::MissingInstanceVariable {
-            name: CHARACTER_HUE_FIELD.into(),
-        })?;
+        let blend_type =
+            blend_type_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
+                name: BLEND_TYPE_FIELD.into(),
+            })?;
+        let character_hue =
+            character_hue_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
+                name: CHARACTER_HUE_FIELD.into(),
+            })?;
 
         Ok(Self {
             opacity,

@@ -94,13 +94,13 @@ impl<'a> FromValue<'a> for AudioFile {
             }
         }
 
-        let volume = volume_field.ok_or(FromValueError::MissingInstanceVariable {
+        let volume = volume_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
             name: VOLUME_FIELD.into(),
         })?;
-        let name = name_field.ok_or(FromValueError::MissingInstanceVariable {
+        let name = name_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
             name: NAME_FIELD.into(),
         })?;
-        let pitch = pitch_field.ok_or(FromValueError::MissingInstanceVariable {
+        let pitch = pitch_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
             name: PITCH_FIELD.into(),
         })?;
 

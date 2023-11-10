@@ -150,7 +150,7 @@ dependencies = [
 [[package]]
 name = "ruby-marshal"
 version = "0.0.0"
-source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs?branch=convert#735086d6cb5096b42009c50619fe182e3a873e60"
+source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs?branch=convert#577791b3fabec5f332e30cff9fa5d9f4fc663fa0"
 dependencies = [
  "generational-arena",
  "indexmap",
