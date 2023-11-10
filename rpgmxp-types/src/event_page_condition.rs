@@ -1,5 +1,7 @@
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueError;
+use ruby_marshal::IntoValue;
+use ruby_marshal::IntoValueError;
 use ruby_marshal::ObjectValue;
 use ruby_marshal::StringValue;
 use ruby_marshal::ValueArena;
@@ -207,5 +209,47 @@ impl<'a> FromValue<'a> for EventPageCondition {
             variable_valid,
             switch2_id,
         })
+    }
+}
+
+impl IntoValue for EventPageCondition {
+    fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
+        let object_name = arena.create_symbol(OBJECT_NAME.into());
+
+        let switch2_valid_field_key = arena.create_symbol(SWITCH2_VALID_FIELD.into());
+        let self_switch_ch_field_key = arena.create_symbol(SELF_SWITCH_CH_FIELD.into());
+        let switch1_id_field_key = arena.create_symbol(SWITCH1_ID_FIELD.into());
+        let switch1_valid_field_key = arena.create_symbol(SWITCH1_VALID_FIELD.into());
+        let variable_value_field_key = arena.create_symbol(VARIABLE_VALUE_FIELD.into());
+        let self_switch_valid_field_key = arena.create_symbol(SELF_SWITCH_VALID_FIELD.into());
+        let variable_id_field_key = arena.create_symbol(VARIABLE_ID_FIELD.into());
+        let variable_valid_field_key = arena.create_symbol(VARIABLE_VALID_FIELD.into());
+        let switch2_id_field_key = arena.create_symbol(SWITCH2_ID_FIELD.into());
+
+        let switch2_valid_field_value = self.switch2_valid.into_value(arena)?;
+        let self_switch_ch_field_value = arena.create_string(self.self_switch_ch.into()).into();
+        let switch1_id_field_value = self.switch1_id.into_value(arena)?;
+        let switch1_valid_field_value = self.switch1_valid.into_value(arena)?;
+        let variable_value_field_value = self.variable_value.into_value(arena)?;
+        let self_switch_valid_field_value = self.self_switch_valid.into_value(arena)?;
+        let variable_id_field_value = self.variable_id.into_value(arena)?;
+        let variable_valid_field_value = self.variable_valid.into_value(arena)?;
+        let switch2_id_field_value = self.switch2_id.into_value(arena)?;
+
+        let fields = vec![
+            (switch2_valid_field_key, switch2_valid_field_value),
+            (self_switch_ch_field_key, self_switch_ch_field_value),
+            (switch1_id_field_key, switch1_id_field_value),
+            (switch1_valid_field_key, switch1_valid_field_value),
+            (variable_value_field_key, variable_value_field_value),
+            (self_switch_valid_field_key, self_switch_valid_field_value),
+            (variable_id_field_key, variable_id_field_value),
+            (variable_valid_field_key, variable_valid_field_value),
+            (switch2_id_field_key, switch2_id_field_value),
+        ];
+
+        let object = arena.create_object(object_name, fields);
+
+        Ok(object.into())
     }
 }
