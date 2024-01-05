@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["EventCommandParameter"],"struct":["AudioFile","EventCommand","EventPageCondition","EventPageGraphic","MoveCommand","MoveRoute","Script"]};

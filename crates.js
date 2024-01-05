@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["rpgmxp_project","rpgmxp_types"];
