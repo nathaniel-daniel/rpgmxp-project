@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.78"
+anyhow = "1.0.79"
 argh = "0.1.12"
 flate2 = "1.0.28"
 rpgmxp-types = { path = "../rpgmxp-types" }
