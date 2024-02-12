@@ -32,6 +32,35 @@ impl std::fmt::Display for TableFromValueError {
 
 impl std::error::Error for TableFromValueError {}
 
+#[derive(Debug)]
+pub enum TableIntoValueError {
+    TooManyItems {
+        len: usize,
+        error: std::num::TryFromIntError,
+    },
+}
+
+impl std::fmt::Display for TableIntoValueError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::TooManyItems { len, .. } => {
+                write!(f, "there are too many table items in table of len {len}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for TableIntoValueError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::TooManyItems { error, .. } => Some(error),
+            // _ => None,
+        }
+    }
+}
+
+const HEADER_SIZE: usize = 4 * 5;
+
 const USER_DEFINED_NAME: &[u8] = b"Table";
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
@@ -65,7 +94,7 @@ impl<'a> FromValue<'a> for Table {
         let value = user_defined.value();
 
         let value_len = value.len();
-        if value_len < (4 * 5) {
+        if value_len < HEADER_SIZE {
             return Err(FromValueError::new_other(TableFromValueError::TooShort {
                 len: value_len,
             }));
@@ -122,6 +151,28 @@ impl<'a> FromValue<'a> for Table {
 
 impl IntoValue for Table {
     fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
-        todo!()
+        let name = arena.create_symbol(USER_DEFINED_NAME.into());
+        let mut value = Vec::with_capacity(HEADER_SIZE + self.items.len());
+
+        value.extend(self.dimensions.to_le_bytes());
+        value.extend(self.x_size.to_le_bytes());
+        value.extend(self.y_size.to_le_bytes());
+        value.extend(self.z_size.to_le_bytes());
+
+        let items_len = self.items.len();
+        let size = i32::try_from(items_len).map_err(|error| {
+            IntoValueError::new_other(TableIntoValueError::TooManyItems {
+                len: items_len,
+                error,
+            })
+        })?;
+        value.extend(size.to_le_bytes());
+
+        for item in self.items.iter() {
+            value.extend(item.to_le_bytes());
+        }
+
+        let user_defined = arena.create_user_defined(name, value);
+        Ok(user_defined.into())
     }
 }
