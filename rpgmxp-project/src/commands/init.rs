@@ -1,5 +1,7 @@
+mod map;
 mod scripts;
 
+use self::map::Map;
 use self::scripts::ScriptList;
 use anyhow::ensure;
 use anyhow::Context;
@@ -44,11 +46,40 @@ fn copy_data(base_in_path: &Path, base_out_path: &Path) -> anyhow::Result<()> {
         let in_path = entry.path();
         ensure!(in_path.extension() == Some("rxdata".as_ref()));
 
-        let file_stem = in_path.file_stem().context("missing file stem")?;
+        let file_stem = in_path
+            .file_stem()
+            .context("missing file stem")?
+            .to_str()
+            .context("file stem is not valid unicode")?;
+
+        let is_map = file_stem.strip_prefix("Map").map_or(false, |file_stem| {
+            file_stem.len() == 3 && file_stem.chars().all(|c| c.is_ascii_digit())
+        });
+
+        if is_map {
+            if file_stem != "Map001" {
+                continue;
+            }
+
+            let map_data = std::fs::read(in_path)?;
+            let value_arena = ruby_marshal::load(&*map_data)?;
+            let mut visited_values = HashSet::new();
+
+            let map: Map = ruby_marshal::FromValue::from_value(
+                &value_arena,
+                value_arena.root(),
+                &mut visited_values,
+            )?;
+
+            dbg!(map);
+
+            continue;
+        }
+
         // We will add more later.
         #[allow(clippy::single_match)]
-        match file_stem.to_str() {
-            Some("Scripts") => {
+        match file_stem {
+            "Scripts" => {
                 let out_dir = out_dir.join("Scripts");
                 std::fs::create_dir_all(&out_dir)?;
                 extract_scripts(&in_path, &out_dir)?;
@@ -126,7 +157,7 @@ fn escape_file_name(file_name: &str) -> String {
         match c {
             '%' | ':' => {
                 let c = u32::from(c);
-                write!(&mut escaped, "%{c:x}").unwrap();
+                write!(&mut escaped, "%{c:02x}").unwrap();
             }
             _ => {
                 escaped.push(c);
