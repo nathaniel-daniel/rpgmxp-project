@@ -1,5 +1,6 @@
 use rpgmxp_types::AudioFile;
 use rpgmxp_types::Event;
+use rpgmxp_types::Table;
 use ruby_marshal::ArrayValue;
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueError;
@@ -30,7 +31,7 @@ pub struct Map {
     pub events: Vec<(i32, Event)>,
     pub bgs: AudioFile,
     pub autoplay_bgm: bool,
-    // pub data: RpgTable,
+    pub data: Table,
     pub autoplay_bgs: bool,
     pub height: i32,
     pub encounter_step: i32,
@@ -64,7 +65,7 @@ impl<'a> FromValue<'a> for Map {
         let mut events_field = None;
         let mut bgs_field = None;
         let mut autoplay_bgm_field = None;
-        // let mut data_field = None;
+        let mut data_field = None;
         let mut autoplay_bgs_field = None;
         let mut height_field = None;
         let mut encounter_step_field = None;
@@ -127,7 +128,11 @@ impl<'a> FromValue<'a> for Map {
                     autoplay_bgm_field = Some(FromValue::from_value(arena, *value, visited)?);
                 }
                 DATA_FIELD => {
-                    // todo!("DATA")
+                    if data_field.is_some() {
+                        return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
+                    }
+
+                    data_field = Some(FromValue::from_value(arena, *value, visited)?);
                 }
                 AUTOPLAY_BGS_FIELD => {
                     if autoplay_bgs_field.is_some() {
@@ -158,7 +163,7 @@ impl<'a> FromValue<'a> for Map {
                     width_field = Some(FromValue::from_value(arena, *value, visited)?);
                 }
                 ENCOUNTER_LIST_FIELD => {
-                    if encounter_step_field.is_some() {
+                    if encounter_list_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
@@ -192,6 +197,9 @@ impl<'a> FromValue<'a> for Map {
         let autoplay_bgm = autoplay_bgm_field.ok_or(FromValueError::MissingInstanceVariable {
             name: AUTOPLAY_BGM_FIELD.into(),
         })?;
+        let data = data_field.ok_or(FromValueError::MissingInstanceVariable {
+            name: DATA_FIELD.into(),
+        })?;
         let autoplay_bgs = autoplay_bgs_field.ok_or(FromValueError::MissingInstanceVariable {
             name: AUTOPLAY_BGS_FIELD.into(),
         })?;
@@ -216,6 +224,7 @@ impl<'a> FromValue<'a> for Map {
             events,
             bgs,
             autoplay_bgm,
+            data,
             autoplay_bgs,
             height,
             encounter_step,
