@@ -97,7 +97,7 @@ impl<'a> FromValue<'a> for Event {
                     x_field = Some(FromValue::from_value(arena, value, visited)?);
                 }
                 ID_FIELD => {
-                    if x_field.is_some() {
+                    if id_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable {
                             name: ID_FIELD.into(),
                         });

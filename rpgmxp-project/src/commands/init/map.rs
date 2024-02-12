@@ -1,10 +1,11 @@
 use rpgmxp_types::AudioFile;
+use rpgmxp_types::Event;
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueError;
+use ruby_marshal::HashValue;
 use ruby_marshal::ObjectValue;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
-// use rpgmxp_types::Event;
 use std::collections::HashSet;
 
 const OBJECT_NAME: &[u8] = b"RPG::Map";
@@ -25,7 +26,7 @@ const ENCOUNTER_LIST_FIELD: &[u8] = b"@encounter_list";
 pub struct Map {
     pub bgm: AudioFile,
     pub tileset_id: i32,
-    //pub events: Vec<(i32, Event)>,
+    pub events: Vec<(i32, Event)>,
 }
 
 impl<'a> FromValue<'a> for Map {
@@ -51,7 +52,7 @@ impl<'a> FromValue<'a> for Map {
 
         let mut bgm_field = None;
         let mut tileset_id_field = None;
-        //let mut events_field = None;
+        let mut events_field = None;
         // let mut bgs_field = None;
         // let mut autoplay_bgm_field = None;
         // let mut data_field = None;
@@ -86,14 +87,21 @@ impl<'a> FromValue<'a> for Map {
                     tileset_id_field = Some(FromValue::from_value(arena, *value, visited)?);
                 }
                 EVENTS_FIELD => {
-                    /*
                     if events_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
-                    */
-                    todo!("Events");
 
-                    // events_field = Some(FromValue::from_value(arena, *value, visited)?);
+                    let events: &HashValue = FromValue::from_value(arena, *value, visited)?;
+
+                    let pairs = events.value();
+                    let mut new_events = Vec::with_capacity(pairs.len());
+                    for (key, value) in pairs.iter().copied() {
+                        let key: i32 = FromValue::from_value(arena, key, visited)?;
+                        let value = FromValue::from_value(arena, value, visited)?;
+                        new_events.push((key, value));
+                    }
+
+                    events_field = Some(new_events);
                 }
                 _ => {
                     todo!("{:#?}", std::str::from_utf8(key))
@@ -107,16 +115,14 @@ impl<'a> FromValue<'a> for Map {
         let tileset_id = tileset_id_field.ok_or(FromValueError::MissingInstanceVariable {
             name: TILESET_ID_FIELD.into(),
         })?;
-        /*
         let events = events_field.ok_or(FromValueError::MissingInstanceVariable {
             name: EVENTS_FIELD.into(),
         })?;
-        */
 
         Ok(Self {
             bgm,
             tileset_id,
-            //events,
+            events,
         })
     }
 }

@@ -121,7 +121,7 @@ impl<'a> FromValue<'a> for EventPage {
                     direction_fix_field = Some(FromValue::from_value(arena, value, visited)?);
                 }
                 MOVE_ROUTE_FIELD => {
-                    if direction_fix_field.is_some() {
+                    if move_route_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable {
                             name: MOVE_ROUTE_FIELD.into(),
                         });
@@ -193,7 +193,7 @@ impl<'a> FromValue<'a> for EventPage {
                     move_speed_field = Some(FromValue::from_value(arena, value, visited)?);
                 }
                 THROUGH_FIELD => {
-                    if move_speed_field.is_some() {
+                    if through_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable {
                             name: THROUGH_FIELD.into(),
                         });
