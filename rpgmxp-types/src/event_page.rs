@@ -4,6 +4,8 @@ use crate::EventPageGraphic;
 use crate::MoveRoute;
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueError;
+use ruby_marshal::IntoValue;
+use ruby_marshal::IntoValueError;
 use ruby_marshal::ObjectValue;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
@@ -267,5 +269,59 @@ impl<'a> FromValue<'a> for EventPage {
             move_speed,
             through,
         })
+    }
+}
+
+impl IntoValue for EventPage {
+    fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
+        let object_name = arena.create_symbol(OBJECT_NAME.into());
+
+        let move_type_field_key = arena.create_symbol(MOVE_TYPE_FIELD.into());
+        let list_field_key = arena.create_symbol(LIST_FIELD.into());
+        let condition_field_key = arena.create_symbol(CONDITION_FIELD.into());
+        let direction_fix_field_key = arena.create_symbol(DIRECTION_FIX_FIELD.into());
+        let move_route_field_key = arena.create_symbol(MOVE_ROUTE_FIELD.into());
+        let trigger_field_key = arena.create_symbol(TRIGGER_FIELD.into());
+        let step_anime_field_key = arena.create_symbol(STEP_ANIME_FIELD.into());
+        let move_frequency_field_key = arena.create_symbol(MOVE_FREQUENCY_FIELD.into());
+        let graphic_field_key = arena.create_symbol(GRAPHIC_FIELD.into());
+        let always_on_top_field_key = arena.create_symbol(ALWAYS_ON_TOP_FIELD.into());
+        let walk_anime_field_key = arena.create_symbol(WALK_ANIME_FIELD.into());
+        let move_speed_field_key = arena.create_symbol(MOVE_SPEED_FIELD.into());
+        let through_field_key = arena.create_symbol(THROUGH_FIELD.into());
+
+        let move_type_field_value = self.move_type.into_value(arena)?;
+        let list_field_value = self.list.into_value(arena)?;
+        let condition_field_value = self.condition.into_value(arena)?;
+        let direction_fix_field_value = self.direction_fix.into_value(arena)?;
+        let move_route_field_value = self.move_route.into_value(arena)?;
+        let trigger_field_value = self.trigger.into_value(arena)?;
+        let step_anime_field_value = self.step_anime.into_value(arena)?;
+        let move_frequency_field_value = self.move_frequency.into_value(arena)?;
+        let graphic_field_value = self.graphic.into_value(arena)?;
+        let always_on_top_field_value = self.always_on_top.into_value(arena)?;
+        let walk_anime_field_value = self.walk_anime.into_value(arena)?;
+        let move_speed_field_value = self.move_speed.into_value(arena)?;
+        let through_field_value = self.through.into_value(arena)?;
+
+        let fields = vec![
+            (move_type_field_key, move_type_field_value),
+            (list_field_key, list_field_value),
+            (condition_field_key, condition_field_value),
+            (direction_fix_field_key, direction_fix_field_value),
+            (move_route_field_key, move_route_field_value),
+            (trigger_field_key, trigger_field_value),
+            (step_anime_field_key, step_anime_field_value),
+            (move_frequency_field_key, move_frequency_field_value),
+            (graphic_field_key, graphic_field_value),
+            (always_on_top_field_key, always_on_top_field_value),
+            (walk_anime_field_key, walk_anime_field_value),
+            (move_speed_field_key, move_speed_field_value),
+            (through_field_key, through_field_value),
+        ];
+
+        let object = arena.create_object(object_name, fields);
+
+        Ok(object.into())
     }
 }

@@ -1,4 +1,5 @@
 mod audio_file;
+mod event;
 mod event_command;
 mod event_command_parameter;
 mod event_page;
@@ -9,6 +10,7 @@ mod move_route;
 mod script;
 
 pub use self::audio_file::AudioFile;
+pub use self::event::Event;
 pub use self::event_command::EventCommand;
 pub use self::event_command_parameter::EventCommandParameter;
 pub use self::event_page::EventPage;
