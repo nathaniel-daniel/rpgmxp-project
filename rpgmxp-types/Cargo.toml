@@ -5,5 +5,5 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs", branch = "convert" }
+ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs" }
 serde = { version = "1.0.193", features = ["derive"] }
