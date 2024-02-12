@@ -57,9 +57,9 @@ fn copy_data(base_in_path: &Path, base_out_path: &Path) -> anyhow::Result<()> {
         });
 
         if is_map {
-            if file_stem != "Map001" {
-                continue;
-            }
+            //if file_stem <= "Map001" {
+            //    continue;
+            //}
 
             let map_data = std::fs::read(in_path)?;
             let value_arena = ruby_marshal::load(&*map_data)?;
