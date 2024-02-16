@@ -1,3 +1,6 @@
+use crate::AudioFile;
+use crate::MoveCommand;
+use crate::MoveRoute;
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueError;
 use ruby_marshal::IntoValue;
@@ -9,6 +12,35 @@ use ruby_marshal::ValueHandle;
 use ruby_marshal::ValueKind;
 use std::collections::HashSet;
 
+#[derive(Debug)]
+pub enum EventCommandParameterFromValueError {
+    UnexpectedValueKind { kind: ValueKind },
+    EmptyArray,
+    UnexpectedArrayValueKind { kind: ValueKind },
+}
+
+impl std::fmt::Display for EventCommandParameterFromValueError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::UnexpectedValueKind { kind } => {
+                write!(
+                    f,
+                    "unexpected value kind for event command parameter: {kind:?}"
+                )
+            }
+            Self::EmptyArray => write!(f, "the event command parameter array is empty"),
+            Self::UnexpectedArrayValueKind { kind } => {
+                write!(
+                    f,
+                    "unexpected event command parameter array value kind: {kind:?}"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for EventCommandParameterFromValueError {}
+
 /// An event command parameter
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
@@ -16,6 +48,9 @@ pub enum EventCommandParameter {
     String(String),
     StringArray(Vec<String>),
     Int(i32),
+    MoveRoute(MoveRoute),
+    MoveCommand(MoveCommand),
+    AudioFile(AudioFile),
 }
 
 impl<'a> FromValue<'a> for EventCommandParameter {
@@ -37,7 +72,9 @@ impl<'a> FromValue<'a> for EventCommandParameter {
                 let value = value.value();
                 // TODO: Maybe make the internal array elements polymorphic.
                 // If empty, static typing is impossible.
-                let first = value.first().expect("array is empty");
+                let first = value.first().ok_or(FromValueError::new_other(
+                    EventCommandParameterFromValueError::EmptyArray,
+                ))?;
                 let first_kind = arena
                     .get(*first)
                     .ok_or(FromValueError::InvalidValueHandle { handle: *first })?
@@ -56,19 +93,62 @@ impl<'a> FromValue<'a> for EventCommandParameter {
 
                         Ok(Self::StringArray(new_value))
                     }
-                    _ => {
-                        todo!("unknown array first kind")
-                    }
+                    _ => Err(FromValueError::new_other(
+                        EventCommandParameterFromValueError::UnexpectedArrayValueKind {
+                            kind: first_kind,
+                        },
+                    )),
                 }
             }
             Value::Fixnum(value) => {
                 let value = value.value();
-
                 Ok(Self::Int(value))
             }
-            _ => {
-                todo!("FromValue is stubbed for EventCommandParameter: {value:?}")
+            Value::Object(value) => {
+                let name = value.name();
+                let name = arena
+                    .get_symbol(name)
+                    .ok_or(FromValueError::InvalidValueHandle {
+                        handle: name.into(),
+                    })?
+                    .value();
+
+                match name {
+                    crate::move_route::OBJECT_NAME => {
+                        visited.remove(&handle);
+                        let value = FromValue::from_value(arena, handle, visited)?;
+
+                        Ok(Self::MoveRoute(value))
+                    }
+                    crate::move_command::OBJECT_NAME => {
+                        visited.remove(&handle);
+                        let value = FromValue::from_value(arena, handle, visited)?;
+
+                        Ok(Self::MoveCommand(value))
+                    }
+                    crate::audio_file::OBJECT_NAME => {
+                        visited.remove(&handle);
+                        let value = FromValue::from_value(arena, handle, visited)?;
+
+                        Ok(Self::AudioFile(value))
+                    }
+                    _ => Err(FromValueError::UnexpectedObjectName { name: name.into() }),
+                }
             }
+            Value::UserDefined(value) => {
+                let name = value.name();
+                let name = arena
+                    .get_symbol(name)
+                    .ok_or(FromValueError::InvalidValueHandle {
+                        handle: name.into(),
+                    })?
+                    .value();
+
+                todo!("{name:?}")
+            }
+            _ => Err(FromValueError::new_other(
+                EventCommandParameterFromValueError::UnexpectedValueKind { kind: value.kind() },
+            )),
         }
     }
 }

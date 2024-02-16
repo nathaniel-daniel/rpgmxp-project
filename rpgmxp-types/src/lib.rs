@@ -9,6 +9,7 @@ mod move_command;
 mod move_route;
 mod script;
 mod table;
+mod tone;
 
 pub use self::audio_file::AudioFile;
 pub use self::event::Event;
@@ -21,3 +22,4 @@ pub use self::move_command::MoveCommand;
 pub use self::move_route::MoveRoute;
 pub use self::script::Script;
 pub use self::table::Table;
+pub use self::tone::Tone;

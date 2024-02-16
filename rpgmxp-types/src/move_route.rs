@@ -8,7 +8,7 @@ use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
 use std::collections::HashSet;
 
-const OBJECT_NAME: &[u8] = b"RPG::MoveRoute";
+pub(crate) const OBJECT_NAME: &[u8] = b"RPG::MoveRoute";
 
 const LIST_FIELD: &[u8] = b"@list";
 const SKIPPABLE_FIELD: &[u8] = b"@skippable";

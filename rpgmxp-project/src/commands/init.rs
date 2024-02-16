@@ -65,11 +65,18 @@ fn copy_data(base_in_path: &Path, base_out_path: &Path) -> anyhow::Result<()> {
             let value_arena = ruby_marshal::load(&*map_data)?;
             let mut visited_values = HashSet::new();
 
-            let map: Map = ruby_marshal::FromValue::from_value(
+            let maybe_map: Result<Map, _> = ruby_marshal::FromValue::from_value(
                 &value_arena,
                 value_arena.root(),
                 &mut visited_values,
-            )?;
+            );
+
+            if let Err(ruby_marshal::FromValueError::Cycle { handle }) = maybe_map.as_ref() {
+                dbg!(handle);
+                dbg!(value_arena.get(*handle));
+            }
+
+            let map = maybe_map?;
 
             dbg!(map);
 

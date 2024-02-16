@@ -8,11 +8,11 @@ use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
 use std::collections::HashSet;
 
-const OBJECT_NAME: &str = "RPG::AudioFile";
+pub(crate) const OBJECT_NAME: &[u8] = b"RPG::AudioFile";
 
-const VOLUME_FIELD: &str = "@volume";
-const NAME_FIELD: &str = "@name";
-const PITCH_FIELD: &str = "@pitch";
+const VOLUME_FIELD: &[u8] = b"@volume";
+const NAME_FIELD: &[u8] = b"@name";
+const PITCH_FIELD: &[u8] = b"@pitch";
 
 /// An audio file
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -41,7 +41,6 @@ impl<'a> FromValue<'a> for AudioFile {
                 handle: name.into(),
             })?
             .value();
-        let name = std::str::from_utf8(name).map_err(FromValueError::new_other)?;
 
         let instance_variables = object.instance_variables();
 
@@ -58,7 +57,6 @@ impl<'a> FromValue<'a> for AudioFile {
                 .get_symbol(key)
                 .ok_or(FromValueError::InvalidValueHandle { handle: key.into() })?
                 .value();
-            let key = std::str::from_utf8(key).map_err(FromValueError::new_other)?;
 
             match key {
                 VOLUME_FIELD => {

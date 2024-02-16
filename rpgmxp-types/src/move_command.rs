@@ -8,7 +8,7 @@ use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
 use std::collections::HashSet;
 
-const OBJECT_NAME: &[u8] = b"RPG::MoveCommand";
+pub(crate) const OBJECT_NAME: &[u8] = b"RPG::MoveCommand";
 
 const PARAMETERS_FIELD: &[u8] = b"@parameters";
 const CODE_FIELD: &[u8] = b"@code";
@@ -26,6 +26,12 @@ impl<'a> FromValue<'a> for MoveCommand {
         visited: &mut HashSet<ValueHandle>,
     ) -> Result<Self, FromValueError> {
         let object: &ObjectValue = FromValue::from_value(arena, handle, visited)?;
+
+        // TODO: Identical MoveCommands appear to be able to be deduped to save space.
+        // This breaks our cycle detection, so we need to disable it for this type.
+        // Consider a stack-based cycle detector.
+        // visited.remove(&handle);
+        visited.clear();
 
         let name = object.name();
         let name = arena
