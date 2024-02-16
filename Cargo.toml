@@ -4,6 +4,3 @@ members = [
     "rpgmxp-project",
     "rpgmxp-types",
 ]
-
-[patch.'https://github.com/nathaniel-daniel/ruby-marshal-rs']
-ruby-marshal = { git = "http://github.com/nathaniel-daniel//ruby-marshal-rs", branch = "convert" }
