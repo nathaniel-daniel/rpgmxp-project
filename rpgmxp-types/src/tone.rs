@@ -1,9 +1,13 @@
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
+use ruby_marshal::IntoValue;
+use ruby_marshal::IntoValueError;
 use ruby_marshal::SymbolValue;
 use ruby_marshal::UserDefinedValue;
 use ruby_marshal::Value;
+use ruby_marshal::ValueArena;
+use ruby_marshal::ValueHandle;
 
 pub(crate) const USER_DEFINED_NAME: &[u8] = b"Tone";
 
@@ -69,5 +73,19 @@ impl<'a> FromValue<'a> for Tone {
             blue,
             gray,
         })
+    }
+}
+
+impl IntoValue for Tone {
+    fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
+        let name = arena.create_symbol(USER_DEFINED_NAME.into());
+
+        let mut value = Vec::with_capacity(32);
+        value.extend(self.red.to_le_bytes());
+        value.extend(self.green.to_le_bytes());
+        value.extend(self.blue.to_le_bytes());
+        value.extend(self.gray.to_le_bytes());
+
+        Ok(arena.create_user_defined(name, value).into())
     }
 }
