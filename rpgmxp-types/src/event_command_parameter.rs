@@ -1,7 +1,9 @@
 use crate::AudioFile;
+use crate::Color;
 use crate::MoveCommand;
 use crate::MoveRoute;
 use crate::Tone;
+use ruby_marshal::DisplayByteString;
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
@@ -13,7 +15,6 @@ use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
 use ruby_marshal::ValueKind;
-use ruby_marshal::DisplayByteString;
 
 #[derive(Debug)]
 pub enum EventCommandParameterFromValueError {
@@ -63,6 +64,7 @@ pub enum EventCommandParameter {
     MoveCommand(MoveCommand),
     AudioFile(AudioFile),
     Tone(Tone),
+    Color(Color),
 }
 
 impl<'a> FromValue<'a> for EventCommandParameter {
@@ -139,6 +141,10 @@ impl<'a> FromValue<'a> for EventCommandParameter {
                     crate::tone::USER_DEFINED_NAME => {
                         let value = FromValue::from_value(ctx, value)?;
                         Ok(Self::Tone(value))
+                    }
+                    crate::color::USER_DEFINED_NAME => {
+                        let value = FromValue::from_value(ctx, value)?;
+                        Ok(Self::Color(value))
                     }
                     _ => Err(FromValueError::new_other(
                         EventCommandParameterFromValueError::UnexpectedUserDefinedName {
