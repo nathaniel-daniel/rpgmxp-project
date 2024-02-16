@@ -5,10 +5,10 @@ use ruby_marshal::ArrayValue;
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
-use ruby_marshal::HashValue;
 use ruby_marshal::ObjectValue;
 use ruby_marshal::SymbolValue;
 use ruby_marshal::Value;
+use std::collections::HashMap;
 
 const OBJECT_NAME: &[u8] = b"RPG::Map";
 
@@ -28,7 +28,7 @@ const ENCOUNTER_LIST_FIELD: &[u8] = b"@encounter_list";
 pub struct Map {
     pub bgm: AudioFile,
     pub tileset_id: i32,
-    pub events: Vec<(i32, Event)>,
+    pub events: HashMap<i32, Event>,
     pub bgs: AudioFile,
     pub autoplay_bgm: bool,
     pub data: Table,
@@ -89,17 +89,7 @@ impl<'a> FromValue<'a> for Map {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    let events: &HashValue = ctx.from_value(value)?;
-
-                    let pairs = events.value();
-                    let mut new_events = Vec::with_capacity(pairs.len());
-                    for (key, value) in pairs.iter().copied() {
-                        let key: i32 = ctx.from_value(key)?;
-                        let value = ctx.from_value(value)?;
-                        new_events.push((key, value));
-                    }
-
-                    events_field = Some(new_events);
+                    events_field = Some(ctx.from_value(value)?);
                 }
                 BGS_FIELD => {
                     if bgs_field.is_some() {
