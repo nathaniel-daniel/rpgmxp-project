@@ -1,12 +1,14 @@
 use ruby_marshal::FromValue;
+use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
 use ruby_marshal::IntoValue;
 use ruby_marshal::IntoValueError;
 use ruby_marshal::ObjectValue;
 use ruby_marshal::StringValue;
+use ruby_marshal::SymbolValue;
+use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
-use std::collections::HashSet;
 
 const OBJECT_NAME: &[u8] = b"RPG::Event::Page::Graphic";
 
@@ -30,19 +32,11 @@ pub struct EventPageGraphic {
 }
 
 impl<'a> FromValue<'a> for EventPageGraphic {
-    fn from_value(
-        arena: &'a ValueArena,
-        value: ValueHandle,
-        visited: &mut HashSet<ValueHandle>,
-    ) -> Result<Self, FromValueError> {
-        let object: &ObjectValue = FromValue::from_value(arena, value, visited)?;
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        let object: &ObjectValue = FromValue::from_value(ctx, value)?;
         let name = object.name();
-        let name = arena
-            .get_symbol(name)
-            .ok_or(FromValueError::InvalidValueHandle {
-                handle: name.into(),
-            })?
-            .value();
+        let name: &SymbolValue = ctx.from_value(name.into())?;
+        let name = name.value();
 
         if name != OBJECT_NAME {
             return Err(FromValueError::UnexpectedObjectName { name: name.into() });
@@ -59,10 +53,8 @@ impl<'a> FromValue<'a> for EventPageGraphic {
         let mut character_hue_field = None;
 
         for (key, value) in instance_variables.iter().copied() {
-            let key = arena
-                .get_symbol(key)
-                .ok_or(FromValueError::InvalidValueHandle { handle: key.into() })?
-                .value();
+            let key: &SymbolValue = ctx.from_value(key.into())?;
+            let key = key.value();
 
             match key {
                 OPACITY_FIELD => {
@@ -72,7 +64,7 @@ impl<'a> FromValue<'a> for EventPageGraphic {
                         });
                     }
 
-                    let opacity: i32 = FromValue::from_value(arena, value, visited)?;
+                    let opacity: i32 = ctx.from_value(value)?;
                     opacity_field = Some(opacity);
                 }
                 CHARACTER_NAME_FIELD => {
@@ -82,8 +74,7 @@ impl<'a> FromValue<'a> for EventPageGraphic {
                         });
                     }
 
-                    let character_name: &StringValue =
-                        FromValue::from_value(arena, value, visited)?;
+                    let character_name: &StringValue = ctx.from_value(value)?;
                     let character_name = std::str::from_utf8(character_name.value())
                         .map_err(FromValueError::new_other)?;
 
@@ -96,7 +87,7 @@ impl<'a> FromValue<'a> for EventPageGraphic {
                         });
                     }
 
-                    let pattern: i32 = FromValue::from_value(arena, value, visited)?;
+                    let pattern: i32 = ctx.from_value(value)?;
                     pattern_field = Some(pattern);
                 }
                 TILE_ID_FIELD => {
@@ -106,7 +97,7 @@ impl<'a> FromValue<'a> for EventPageGraphic {
                         });
                     }
 
-                    let tile_id: i32 = FromValue::from_value(arena, value, visited)?;
+                    let tile_id: i32 = ctx.from_value(value)?;
                     tile_id_field = Some(tile_id);
                 }
                 DIRECTION_FIELD => {
@@ -116,7 +107,7 @@ impl<'a> FromValue<'a> for EventPageGraphic {
                         });
                     }
 
-                    let direction: i32 = FromValue::from_value(arena, value, visited)?;
+                    let direction: i32 = ctx.from_value(value)?;
                     direction_field = Some(direction);
                 }
                 BLEND_TYPE_FIELD => {
@@ -126,7 +117,7 @@ impl<'a> FromValue<'a> for EventPageGraphic {
                         });
                     }
 
-                    let blend_type: i32 = FromValue::from_value(arena, value, visited)?;
+                    let blend_type: i32 = ctx.from_value(value)?;
                     blend_type_field = Some(blend_type);
                 }
                 CHARACTER_HUE_FIELD => {
@@ -136,7 +127,7 @@ impl<'a> FromValue<'a> for EventPageGraphic {
                         });
                     }
 
-                    let character_hue: i32 = FromValue::from_value(arena, value, visited)?;
+                    let character_hue: i32 = ctx.from_value(value)?;
                     character_hue_field = Some(character_hue);
                 }
                 _ => return Err(FromValueError::UnknownInstanceVariable { name: key.into() }),

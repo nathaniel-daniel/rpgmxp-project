@@ -1,12 +1,14 @@
 use ruby_marshal::FromValue;
+use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
 use ruby_marshal::IntoValue;
 use ruby_marshal::IntoValueError;
 use ruby_marshal::ObjectValue;
 use ruby_marshal::StringValue;
+use ruby_marshal::SymbolValue;
+use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
-use std::collections::HashSet;
 
 const OBJECT_NAME: &[u8] = b"RPG::Event::Page::Condition";
 
@@ -34,19 +36,11 @@ pub struct EventPageCondition {
 }
 
 impl<'a> FromValue<'a> for EventPageCondition {
-    fn from_value(
-        arena: &'a ValueArena,
-        handle: ValueHandle,
-        visited: &mut HashSet<ValueHandle>,
-    ) -> Result<Self, FromValueError> {
-        let object: &ObjectValue = FromValue::from_value(arena, handle, visited)?;
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        let object: &ObjectValue = FromValue::from_value(ctx, value)?;
         let name = object.name();
-        let name = arena
-            .get_symbol(name)
-            .ok_or(FromValueError::InvalidValueHandle {
-                handle: name.into(),
-            })?
-            .value();
+        let name: &SymbolValue = ctx.from_value(name.into())?;
+        let name = name.value();
         if name != OBJECT_NAME {
             return Err(FromValueError::UnexpectedObjectName { name: name.into() });
         }
@@ -64,10 +58,9 @@ impl<'a> FromValue<'a> for EventPageCondition {
         let mut switch2_id_field = None;
 
         for (key, value) in instance_variables.iter().copied() {
-            let key = arena
-                .get_symbol(key)
-                .ok_or(FromValueError::InvalidValueHandle { handle: key.into() })?
-                .value();
+            let key: &SymbolValue = ctx.from_value(key.into())?;
+            let key = key.value();
+
             match key {
                 SWITCH2_VALID_FIELD => {
                     if switch2_valid_field.is_some() {
@@ -76,7 +69,7 @@ impl<'a> FromValue<'a> for EventPageCondition {
                         });
                     }
 
-                    switch2_valid_field = Some(FromValue::from_value(arena, value, visited)?);
+                    switch2_valid_field = Some(ctx.from_value(value)?);
                 }
                 SELF_SWITCH_CH_FIELD => {
                     if self_switch_ch_field.is_some() {
@@ -85,7 +78,7 @@ impl<'a> FromValue<'a> for EventPageCondition {
                         });
                     }
 
-                    let value: &StringValue = FromValue::from_value(arena, value, visited)?;
+                    let value: &StringValue = ctx.from_value(value)?;
                     self_switch_ch_field = Some(
                         std::str::from_utf8(value.value())
                             .map_err(FromValueError::new_other)?
@@ -99,7 +92,7 @@ impl<'a> FromValue<'a> for EventPageCondition {
                         });
                     }
 
-                    switch1_id_field = Some(FromValue::from_value(arena, value, visited)?);
+                    switch1_id_field = Some(ctx.from_value(value)?);
                 }
                 SWITCH1_VALID_FIELD => {
                     if switch1_valid_field.is_some() {
@@ -108,7 +101,7 @@ impl<'a> FromValue<'a> for EventPageCondition {
                         });
                     }
 
-                    switch1_valid_field = Some(FromValue::from_value(arena, value, visited)?);
+                    switch1_valid_field = Some(ctx.from_value(value)?);
                 }
                 VARIABLE_VALUE_FIELD => {
                     if variable_value_field.is_some() {
@@ -117,7 +110,7 @@ impl<'a> FromValue<'a> for EventPageCondition {
                         });
                     }
 
-                    variable_value_field = Some(FromValue::from_value(arena, value, visited)?);
+                    variable_value_field = Some(ctx.from_value(value)?);
                 }
                 SELF_SWITCH_VALID_FIELD => {
                     if self_switch_valid_field.is_some() {
@@ -126,7 +119,7 @@ impl<'a> FromValue<'a> for EventPageCondition {
                         });
                     }
 
-                    self_switch_valid_field = Some(FromValue::from_value(arena, value, visited)?);
+                    self_switch_valid_field = Some(ctx.from_value(value)?);
                 }
                 VARIABLE_ID_FIELD => {
                     if variable_id_field.is_some() {
@@ -135,7 +128,7 @@ impl<'a> FromValue<'a> for EventPageCondition {
                         });
                     }
 
-                    variable_id_field = Some(FromValue::from_value(arena, value, visited)?);
+                    variable_id_field = Some(ctx.from_value(value)?);
                 }
                 VARIABLE_VALID_FIELD => {
                     if variable_valid_field.is_some() {
@@ -144,7 +137,7 @@ impl<'a> FromValue<'a> for EventPageCondition {
                         });
                     }
 
-                    variable_valid_field = Some(FromValue::from_value(arena, value, visited)?);
+                    variable_valid_field = Some(ctx.from_value(value)?);
                 }
                 SWITCH2_ID_FIELD => {
                     if switch2_id_field.is_some() {
@@ -153,7 +146,7 @@ impl<'a> FromValue<'a> for EventPageCondition {
                         });
                     }
 
-                    switch2_id_field = Some(FromValue::from_value(arena, value, visited)?);
+                    switch2_id_field = Some(ctx.from_value(value)?);
                 }
                 _ => {
                     return Err(FromValueError::UnknownInstanceVariable { name: key.into() });

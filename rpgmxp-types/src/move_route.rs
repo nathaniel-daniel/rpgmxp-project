@@ -1,12 +1,14 @@
 use crate::MoveCommand;
 use ruby_marshal::FromValue;
+use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
 use ruby_marshal::IntoValue;
 use ruby_marshal::IntoValueError;
 use ruby_marshal::ObjectValue;
+use ruby_marshal::SymbolValue;
+use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
-use std::collections::HashSet;
 
 pub(crate) const OBJECT_NAME: &[u8] = b"RPG::MoveRoute";
 
@@ -22,20 +24,12 @@ pub struct MoveRoute {
 }
 
 impl<'a> FromValue<'a> for MoveRoute {
-    fn from_value(
-        arena: &'a ValueArena,
-        handle: ValueHandle,
-        visited: &mut HashSet<ValueHandle>,
-    ) -> Result<Self, FromValueError> {
-        let object: &ObjectValue = FromValue::from_value(arena, handle, visited)?;
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        let object: &ObjectValue = FromValue::from_value(ctx, value)?;
 
         let name = object.name();
-        let name = arena
-            .get_symbol(name)
-            .ok_or(FromValueError::InvalidValueHandle {
-                handle: name.into(),
-            })?
-            .value();
+        let name: &SymbolValue = ctx.from_value(name.into())?;
+        let name = name.value();
         if name != OBJECT_NAME {
             return Err(FromValueError::UnexpectedObjectName { name: name.into() });
         }
@@ -47,10 +41,8 @@ impl<'a> FromValue<'a> for MoveRoute {
         let mut repeat_field = None;
 
         for (key, value) in instance_variables.iter().copied() {
-            let key = arena
-                .get_symbol(key)
-                .ok_or(FromValueError::InvalidValueHandle { handle: key.into() })?
-                .value();
+            let key: &SymbolValue = ctx.from_value(key.into())?;
+            let key = key.value();
 
             match key {
                 LIST_FIELD => {
@@ -58,21 +50,21 @@ impl<'a> FromValue<'a> for MoveRoute {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    list_field = Some(FromValue::from_value(arena, value, visited)?);
+                    list_field = Some(ctx.from_value(value)?);
                 }
                 SKIPPABLE_FIELD => {
                     if skippable_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    skippable_field = Some(FromValue::from_value(arena, value, visited)?);
+                    skippable_field = Some(ctx.from_value(value)?);
                 }
                 REPEAT_FIELD => {
                     if repeat_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    repeat_field = Some(FromValue::from_value(arena, value, visited)?);
+                    repeat_field = Some(ctx.from_value(value)?);
                 }
                 _ => {
                     return Err(FromValueError::UnknownInstanceVariable { name: key.into() });
