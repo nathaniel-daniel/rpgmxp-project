@@ -5,7 +5,6 @@ use self::map::Map;
 use self::scripts::ScriptList;
 use anyhow::ensure;
 use anyhow::Context;
-use std::collections::HashSet;
 use std::fmt::Write;
 use std::path::Path;
 use std::path::PathBuf;
@@ -63,13 +62,9 @@ fn copy_data(base_in_path: &Path, base_out_path: &Path) -> anyhow::Result<()> {
 
             let map_data = std::fs::read(in_path)?;
             let value_arena = ruby_marshal::load(&*map_data)?;
-            let mut visited_values = HashSet::new();
+            let ctx = ruby_marshal::FromValueContext::new(&value_arena);
 
-            let maybe_map: Result<Map, _> = ruby_marshal::FromValue::from_value(
-                &value_arena,
-                value_arena.root(),
-                &mut visited_values,
-            );
+            let maybe_map: Result<Map, _> = ctx.from_value(value_arena.root());
 
             if let Err(ruby_marshal::FromValueError::Cycle { handle }) = maybe_map.as_ref() {
                 dbg!(handle);
@@ -143,10 +138,9 @@ fn copy_graphics(base_in_path: &Path, base_out_path: &Path) -> anyhow::Result<()
 fn extract_scripts(in_path: &Path, out_dir: &Path) -> anyhow::Result<()> {
     let scripts_data = std::fs::read(in_path)?;
     let value_arena = ruby_marshal::load(&*scripts_data)?;
-    let mut visited_values = HashSet::new();
+    let ctx = ruby_marshal::FromValueContext::new(&value_arena);
 
-    let script_list: ScriptList =
-        ruby_marshal::FromValue::from_value(&value_arena, value_arena.root(), &mut visited_values)?;
+    let script_list: ScriptList = ctx.from_value(value_arena.root())?;
 
     for (script_index, script) in script_list.scripts.iter().enumerate() {
         let escaped_script_name = escape_file_name(&script.name);

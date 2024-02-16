@@ -3,12 +3,12 @@ use rpgmxp_types::Event;
 use rpgmxp_types::Table;
 use ruby_marshal::ArrayValue;
 use ruby_marshal::FromValue;
+use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
 use ruby_marshal::HashValue;
 use ruby_marshal::ObjectValue;
-use ruby_marshal::ValueArena;
-use ruby_marshal::ValueHandle;
-use std::collections::HashSet;
+use ruby_marshal::SymbolValue;
+use ruby_marshal::Value;
 
 const OBJECT_NAME: &[u8] = b"RPG::Map";
 
@@ -40,19 +40,11 @@ pub struct Map {
 }
 
 impl<'a> FromValue<'a> for Map {
-    fn from_value(
-        arena: &'a ValueArena,
-        handle: ValueHandle,
-        visited: &mut HashSet<ValueHandle>,
-    ) -> Result<Self, FromValueError> {
-        let object: &ObjectValue = FromValue::from_value(arena, handle, visited)?;
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        let object: &ObjectValue = FromValue::from_value(ctx, value)?;
         let name = object.name();
-        let name = arena
-            .get_symbol(name)
-            .ok_or(FromValueError::InvalidValueHandle {
-                handle: name.into(),
-            })?
-            .value();
+        let name: &SymbolValue = ctx.from_value(name.into())?;
+        let name = name.value();
 
         if name != OBJECT_NAME {
             return Err(FromValueError::UnexpectedObjectName { name: name.into() });
@@ -72,13 +64,9 @@ impl<'a> FromValue<'a> for Map {
         let mut width_field = None;
         let mut encounter_list_field = None;
 
-        for (key, value) in instance_variables.iter() {
-            let key = arena
-                .get_symbol(*key)
-                .ok_or(FromValueError::InvalidValueHandle {
-                    handle: (*key).into(),
-                })?
-                .value();
+        for (key, value) in instance_variables.iter().copied() {
+            let key: &SymbolValue = ctx.from_value(key.into())?;
+            let key = key.value();
 
             match key {
                 BGM_FIELD => {
@@ -86,7 +74,7 @@ impl<'a> FromValue<'a> for Map {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    let bgm = AudioFile::from_value(arena, *value, visited)?;
+                    let bgm = ctx.from_value(value)?;
                     bgm_field = Some(bgm);
                 }
                 TILESET_ID_FIELD => {
@@ -94,20 +82,20 @@ impl<'a> FromValue<'a> for Map {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    tileset_id_field = Some(FromValue::from_value(arena, *value, visited)?);
+                    tileset_id_field = Some(ctx.from_value(value)?);
                 }
                 EVENTS_FIELD => {
                     if events_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    let events: &HashValue = FromValue::from_value(arena, *value, visited)?;
+                    let events: &HashValue = ctx.from_value(value)?;
 
                     let pairs = events.value();
                     let mut new_events = Vec::with_capacity(pairs.len());
                     for (key, value) in pairs.iter().copied() {
-                        let key: i32 = FromValue::from_value(arena, key, visited)?;
-                        let value = FromValue::from_value(arena, value, visited)?;
+                        let key: i32 = ctx.from_value(key)?;
+                        let value = ctx.from_value(value)?;
                         new_events.push((key, value));
                     }
 
@@ -118,57 +106,56 @@ impl<'a> FromValue<'a> for Map {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    bgs_field = Some(FromValue::from_value(arena, *value, visited)?);
+                    bgs_field = Some(ctx.from_value(value)?);
                 }
                 AUTOPLAY_BGM_FIELD => {
                     if autoplay_bgm_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    autoplay_bgm_field = Some(FromValue::from_value(arena, *value, visited)?);
+                    autoplay_bgm_field = Some(ctx.from_value(value)?);
                 }
                 DATA_FIELD => {
                     if data_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    data_field = Some(FromValue::from_value(arena, *value, visited)?);
+                    data_field = Some(ctx.from_value(value)?);
                 }
                 AUTOPLAY_BGS_FIELD => {
                     if autoplay_bgs_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    autoplay_bgs_field = Some(FromValue::from_value(arena, *value, visited)?);
+                    autoplay_bgs_field = Some(ctx.from_value(value)?);
                 }
                 HEIGHT_FIELD => {
                     if height_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    height_field = Some(FromValue::from_value(arena, *value, visited)?);
+                    height_field = Some(ctx.from_value(value)?);
                 }
                 ENCOUNTER_STEP_FIELD => {
                     if encounter_step_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    encounter_step_field = Some(FromValue::from_value(arena, *value, visited)?);
+                    encounter_step_field = Some(ctx.from_value(value)?);
                 }
                 WIDTH_FIELD => {
                     if width_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    width_field = Some(FromValue::from_value(arena, *value, visited)?);
+                    width_field = Some(ctx.from_value(value)?);
                 }
                 ENCOUNTER_LIST_FIELD => {
                     if encounter_list_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    let encounter_list: &ArrayValue =
-                        FromValue::from_value(arena, *value, visited)?;
+                    let encounter_list: &ArrayValue = ctx.from_value(value)?;
 
                     if !encounter_list.is_empty() {
                         todo!("ENCOUNTER_LIST");

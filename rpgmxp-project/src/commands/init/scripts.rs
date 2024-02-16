@@ -1,5 +1,9 @@
 use flate2::bufread::ZlibDecoder;
-use std::collections::HashSet;
+use ruby_marshal::ArrayValue;
+use ruby_marshal::FromValue;
+use ruby_marshal::FromValueContext;
+use ruby_marshal::FromValueError;
+use ruby_marshal::Value;
 use std::io::Read;
 
 #[derive(Debug)]
@@ -7,19 +11,14 @@ pub struct ScriptList {
     pub scripts: Vec<Script>,
 }
 
-impl<'a> ruby_marshal::FromValue<'a> for ScriptList {
-    fn from_value(
-        arena: &'a ruby_marshal::ValueArena,
-        handle: ruby_marshal::ValueHandle,
-        visited: &mut HashSet<ruby_marshal::ValueHandle>,
-    ) -> Result<Self, ruby_marshal::FromValueError> {
-        let array: &ruby_marshal::ArrayValue =
-            ruby_marshal::FromValue::from_value(arena, handle, visited)?;
+impl<'a> FromValue<'a> for ScriptList {
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        let array: &ArrayValue = FromValue::from_value(ctx, value)?;
         let array = array.value();
 
         let mut scripts = Vec::with_capacity(array.len());
         for handle in array {
-            let script: Script = ruby_marshal::FromValue::from_value(arena, *handle, visited)?;
+            let script: Script = ctx.from_value(*handle)?;
             scripts.push(script);
         }
 
@@ -36,19 +35,14 @@ pub struct Script {
 }
 
 impl<'a> ruby_marshal::FromValue<'a> for Script {
-    fn from_value(
-        arena: &'a ruby_marshal::ValueArena,
-        handle: ruby_marshal::ValueHandle,
-        visited: &mut HashSet<ruby_marshal::ValueHandle>,
-    ) -> Result<Self, ruby_marshal::FromValueError> {
-        let script: rpgmxp_types::Script =
-            ruby_marshal::FromValue::from_value(arena, handle, visited)?;
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        let script: rpgmxp_types::Script = FromValue::from_value(ctx, value)?;
 
         let mut decoder = ZlibDecoder::new(&*script.data);
         let mut data = String::new();
         decoder
             .read_to_string(&mut data)
-            .map_err(|error| ruby_marshal::FromValueError::Other {
+            .map_err(|error| FromValueError::Other {
                 error: error.into(),
             })?;
 
