@@ -1,6 +1,7 @@
 use crate::AudioFile;
 use crate::MoveCommand;
 use crate::MoveRoute;
+use crate::Tone;
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
@@ -12,12 +13,14 @@ use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
 use ruby_marshal::ValueKind;
+use ruby_marshal::DisplayByteString;
 
 #[derive(Debug)]
 pub enum EventCommandParameterFromValueError {
     UnexpectedValueKind { kind: ValueKind },
     EmptyArray,
     UnexpectedArrayValueKind { kind: ValueKind },
+    UnexpectedUserDefinedName { name: Vec<u8> },
 }
 
 impl std::fmt::Display for EventCommandParameterFromValueError {
@@ -36,6 +39,13 @@ impl std::fmt::Display for EventCommandParameterFromValueError {
                     "unexpected event command parameter array value kind: {kind:?}"
                 )
             }
+            Self::UnexpectedUserDefinedName { name } => {
+                let name = DisplayByteString(name);
+                write!(
+                    f,
+                    "unexpected event command parameter user defined name: {name}"
+                )
+            }
         }
     }
 }
@@ -52,13 +62,11 @@ pub enum EventCommandParameter {
     MoveRoute(MoveRoute),
     MoveCommand(MoveCommand),
     AudioFile(AudioFile),
+    Tone(Tone),
 }
 
 impl<'a> FromValue<'a> for EventCommandParameter {
-    fn from_value(
-        ctx: &FromValueContext<'a>,
-        value: &Value,
-    ) -> std::result::Result<Self, FromValueError> {
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
         match value {
             Value::String(value) => {
                 let value = value.value();
@@ -122,12 +130,22 @@ impl<'a> FromValue<'a> for EventCommandParameter {
                     _ => Err(FromValueError::UnexpectedObjectName { name: name.into() }),
                 }
             }
-            Value::UserDefined(value) => {
-                let name = value.name();
+            Value::UserDefined(user_defined_value) => {
+                let name = user_defined_value.name();
                 let name: &SymbolValue = ctx.from_value(name.into())?;
                 let name = name.value();
 
-                todo!("{name:?}")
+                match name {
+                    crate::tone::USER_DEFINED_NAME => {
+                        let value = FromValue::from_value(ctx, value)?;
+                        Ok(Self::Tone(value))
+                    }
+                    _ => Err(FromValueError::new_other(
+                        EventCommandParameterFromValueError::UnexpectedUserDefinedName {
+                            name: name.into(),
+                        },
+                    )),
+                }
             }
             _ => Err(FromValueError::new_other(
                 EventCommandParameterFromValueError::UnexpectedValueKind { kind: value.kind() },

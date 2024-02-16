@@ -51,29 +51,44 @@ fn copy_data(base_in_path: &Path, base_out_path: &Path) -> anyhow::Result<()> {
             .to_str()
             .context("file stem is not valid unicode")?;
 
-        let is_map = file_stem.strip_prefix("Map").map_or(false, |file_stem| {
-            file_stem.len() == 3 && file_stem.chars().all(|c| c.is_ascii_digit())
+        let map_number = file_stem.strip_prefix("Map").and_then(|file_stem| {
+            if file_stem.len() != 3 {
+                return None;
+            }
+
+            if !file_stem.chars().all(|c| c.is_ascii_digit()) {
+                return None;
+            }
+
+            Some(file_stem)
         });
 
-        if is_map {
+        if let Some(map_number) = map_number {
             //if file_stem <= "Map001" {
             //    continue;
             //}
 
-            let map_data = std::fs::read(in_path)?;
+            let map_data = std::fs::read(&in_path)?;
             let value_arena = ruby_marshal::load(&*map_data)?;
             let ctx = ruby_marshal::FromValueContext::new(&value_arena);
 
             let maybe_map: Result<Map, _> = ctx.from_value(value_arena.root());
 
-            if let Err(ruby_marshal::FromValueError::Cycle { handle }) = maybe_map.as_ref() {
-                dbg!(handle);
-                dbg!(value_arena.get(*handle));
+            if let Err(ruby_marshal::FromValueError::UnexpectedValueKind { kind, trace }) =
+                maybe_map.as_ref()
+            {
+                dbg!(kind);
+                for handle in trace.iter().copied() {
+                    let value = value_arena.get(handle).unwrap();
+                    dbg!(DebugValue::new(&value_arena, value, 10));
+                }
             }
 
-            let map = maybe_map?;
+            let map = maybe_map
+                .with_context(|| format!("failed to extract data from Map{map_number:03}"))?;
 
-            dbg!(map);
+            let out_path = out_dir.join(format!("Map{map_number}.json"));
+            std::fs::write(&out_path, &serde_json::to_string_pretty(&map)?)?;
 
             continue;
         }
@@ -166,4 +181,87 @@ fn escape_file_name(file_name: &str) -> String {
         }
     }
     escaped
+}
+
+struct DebugValue<'a> {
+    arena: &'a ruby_marshal::ValueArena,
+    value: &'a ruby_marshal::Value,
+    limit: usize,
+}
+
+impl<'a> DebugValue<'a> {
+    fn new(
+        arena: &'a ruby_marshal::ValueArena,
+        value: &'a ruby_marshal::Value,
+        limit: usize,
+    ) -> Self {
+        Self {
+            arena,
+            value,
+            limit,
+        }
+    }
+}
+
+impl std::fmt::Debug for DebugValue<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.limit == 0 {
+            return self.value.fmt(f);
+        }
+
+        match &self.value {
+            ruby_marshal::Value::Bool(value) => value.value().fmt(f),
+            ruby_marshal::Value::Fixnum(value) => value.value().fmt(f),
+            ruby_marshal::Value::String(value) => {
+                let value = value.value();
+                match std::str::from_utf8(value) {
+                    Ok(value) => value.fmt(f),
+                    Err(_error) => value.fmt(f),
+                }
+            }
+            ruby_marshal::Value::Array(value) => {
+                let mut f = f.debug_list();
+                for handle in value.value().iter().copied() {
+                    match self.arena.get(handle) {
+                        Some(value) => {
+                            f.entry(&DebugValue::new(self.arena, value, self.limit - 1));
+                        }
+                        None => {
+                            f.entry(&handle);
+                        }
+                    }
+                }
+                f.finish()
+            }
+            ruby_marshal::Value::Object(value) => {
+                let name = value.name();
+                let name = match self
+                    .arena
+                    .get_symbol(name)
+                    .and_then(|value| std::str::from_utf8(value.value()).ok())
+                {
+                    Some(name) => name,
+                    None => {
+                        return value.fmt(f);
+                    }
+                };
+
+                let instance_variables = value.instance_variables();
+
+                let mut f = f.debug_struct(name);
+
+                for (key, value) in instance_variables.iter().copied() {
+                    let key = self.arena.get_symbol(key).unwrap().value();
+                    let key = std::str::from_utf8(key).unwrap();
+
+                    let value = self.arena.get(value).unwrap();
+
+                    f.field(key, &DebugValue::new(self.arena, value, self.limit - 1));
+                }
+
+                f.finish()
+            }
+            _ => self.value.fmt(f),
+        }
+    }
 }

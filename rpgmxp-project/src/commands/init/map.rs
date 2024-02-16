@@ -24,7 +24,7 @@ const ENCOUNTER_STEP_FIELD: &[u8] = b"@encounter_step";
 const WIDTH_FIELD: &[u8] = b"@width";
 const ENCOUNTER_LIST_FIELD: &[u8] = b"@encounter_list";
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Map {
     pub bgm: AudioFile,
     pub tileset_id: i32,
