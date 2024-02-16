@@ -1,12 +1,14 @@
 use crate::EventCommandParameter;
 use ruby_marshal::FromValue;
+use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
 use ruby_marshal::IntoValue;
 use ruby_marshal::IntoValueError;
 use ruby_marshal::ObjectValue;
+use ruby_marshal::SymbolValue;
+use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
-use std::collections::HashSet;
 
 pub(crate) const OBJECT_NAME: &[u8] = b"RPG::MoveCommand";
 
@@ -20,26 +22,13 @@ pub struct MoveCommand {
 }
 
 impl<'a> FromValue<'a> for MoveCommand {
-    fn from_value(
-        arena: &'a ValueArena,
-        handle: ValueHandle,
-        visited: &mut HashSet<ValueHandle>,
-    ) -> Result<Self, FromValueError> {
-        let object: &ObjectValue = FromValue::from_value(arena, handle, visited)?;
-
-        // TODO: Identical MoveCommands appear to be able to be deduped to save space.
-        // This breaks our cycle detection, so we need to disable it for this type.
-        // Consider a stack-based cycle detector.
-        // visited.remove(&handle);
-        visited.clear();
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        let object: &ObjectValue = FromValue::from_value(ctx, value)?;
 
         let name = object.name();
-        let name = arena
-            .get_symbol(name)
-            .ok_or(FromValueError::InvalidValueHandle {
-                handle: name.into(),
-            })?
-            .value();
+        let name: &SymbolValue = ctx.from_value(name.into())?;
+        let name = name.value();
+
         if name != OBJECT_NAME {
             return Err(FromValueError::UnexpectedObjectName { name: name.into() });
         }
@@ -50,10 +39,8 @@ impl<'a> FromValue<'a> for MoveCommand {
         let mut code_field = None;
 
         for (key, value) in instance_variables.iter().copied() {
-            let key = arena
-                .get_symbol(key)
-                .ok_or_else(|| FromValueError::InvalidValueHandle { handle: key.into() })?
-                .value();
+            let key: &SymbolValue = ctx.from_value(key.into())?;
+            let key = key.value();
 
             match key {
                 PARAMETERS_FIELD => {
@@ -61,14 +48,14 @@ impl<'a> FromValue<'a> for MoveCommand {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    parameters_field = Some(FromValue::from_value(arena, value, visited)?);
+                    parameters_field = Some(ctx.from_value(value)?);
                 }
                 CODE_FIELD => {
                     if code_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
                     }
 
-                    code_field = Some(FromValue::from_value(arena, value, visited)?);
+                    code_field = Some(ctx.from_value(value)?);
                 }
                 _ => {
                     return Err(FromValueError::UnknownInstanceVariable { name: key.into() });

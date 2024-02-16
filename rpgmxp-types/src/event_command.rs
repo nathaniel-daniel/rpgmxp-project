@@ -1,12 +1,14 @@
 use crate::EventCommandParameter;
 use ruby_marshal::FromValue;
+use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
 use ruby_marshal::IntoValue;
 use ruby_marshal::IntoValueError;
 use ruby_marshal::ObjectValue;
+use ruby_marshal::SymbolValue;
+use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
-use std::collections::HashSet;
 
 const OBJECT_NAME: &[u8] = b"RPG::EventCommand";
 
@@ -26,19 +28,11 @@ pub struct EventCommand {
 }
 
 impl<'a> FromValue<'a> for EventCommand {
-    fn from_value(
-        arena: &'a ValueArena,
-        handle: ValueHandle,
-        visited: &mut HashSet<ValueHandle>,
-    ) -> Result<Self, FromValueError> {
-        let object: &ObjectValue = FromValue::from_value(arena, handle, visited)?;
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        let object: &ObjectValue = FromValue::from_value(ctx, value)?;
         let name = object.name();
-        let name = arena
-            .get_symbol(name)
-            .ok_or(FromValueError::InvalidValueHandle {
-                handle: name.into(),
-            })?
-            .value();
+        let name: &SymbolValue = ctx.from_value(name.into())?;
+        let name = name.value();
 
         if name != OBJECT_NAME {
             return Err(FromValueError::UnexpectedObjectName { name: name.into() });
@@ -51,10 +45,8 @@ impl<'a> FromValue<'a> for EventCommand {
         let mut code_field = None;
 
         for (key, value) in instance_variables.iter().copied() {
-            let key = arena
-                .get_symbol(key)
-                .ok_or(FromValueError::InvalidValueHandle { handle: key.into() })?
-                .value();
+            let key: &SymbolValue = ctx.from_value(key.into())?;
+            let key = key.value();
 
             match key {
                 PARAMETERS_FIELD => {
@@ -64,7 +56,7 @@ impl<'a> FromValue<'a> for EventCommand {
                         });
                     }
 
-                    parameters_field = Some(FromValue::from_value(arena, value, visited)?);
+                    parameters_field = Some(ctx.from_value(value)?);
                 }
                 CODE_FIELD => {
                     if code_field.is_some() {
@@ -73,7 +65,7 @@ impl<'a> FromValue<'a> for EventCommand {
                         });
                     }
 
-                    code_field = Some(FromValue::from_value(arena, value, visited)?);
+                    code_field = Some(ctx.from_value(value)?);
                 }
                 INDENT_FIELD => {
                     if indent_field.is_some() {
@@ -82,7 +74,7 @@ impl<'a> FromValue<'a> for EventCommand {
                         });
                     }
 
-                    indent_field = Some(FromValue::from_value(arena, value, visited)?);
+                    indent_field = Some(ctx.from_value(value)?);
                 }
                 _ => {
                     return Err(FromValueError::UnknownInstanceVariable { name: key.into() });

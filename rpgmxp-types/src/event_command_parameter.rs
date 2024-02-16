@@ -2,15 +2,16 @@ use crate::AudioFile;
 use crate::MoveCommand;
 use crate::MoveRoute;
 use ruby_marshal::FromValue;
+use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
 use ruby_marshal::IntoValue;
 use ruby_marshal::IntoValueError;
 use ruby_marshal::StringValue;
+use ruby_marshal::SymbolValue;
 use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
 use ruby_marshal::ValueKind;
-use std::collections::HashSet;
 
 #[derive(Debug)]
 pub enum EventCommandParameterFromValueError {
@@ -55,11 +56,9 @@ pub enum EventCommandParameter {
 
 impl<'a> FromValue<'a> for EventCommandParameter {
     fn from_value(
-        arena: &'a ValueArena,
-        handle: ValueHandle,
-        visited: &mut HashSet<ValueHandle>,
+        ctx: &FromValueContext<'a>,
+        value: &Value,
     ) -> std::result::Result<Self, FromValueError> {
-        let value: &Value = FromValue::from_value(arena, handle, visited)?;
         match value {
             Value::String(value) => {
                 let value = value.value();
@@ -75,16 +74,14 @@ impl<'a> FromValue<'a> for EventCommandParameter {
                 let first = value.first().ok_or(FromValueError::new_other(
                     EventCommandParameterFromValueError::EmptyArray,
                 ))?;
-                let first_kind = arena
-                    .get(*first)
-                    .ok_or(FromValueError::InvalidValueHandle { handle: *first })?
-                    .kind();
+                let first: &Value = ctx.from_value(*first)?;
+                let first_kind = first.kind();
 
                 match first_kind {
                     ValueKind::String => {
                         let mut new_value = Vec::with_capacity(value.len());
                         for value in value.iter().copied() {
-                            let value: &StringValue = FromValue::from_value(arena, value, visited)?;
+                            let value: &StringValue = ctx.from_value(value)?;
                             let value = std::str::from_utf8(value.value())
                                 .map_err(FromValueError::new_other)?
                                 .to_string();
@@ -104,32 +101,22 @@ impl<'a> FromValue<'a> for EventCommandParameter {
                 let value = value.value();
                 Ok(Self::Int(value))
             }
-            Value::Object(value) => {
-                let name = value.name();
-                let name = arena
-                    .get_symbol(name)
-                    .ok_or(FromValueError::InvalidValueHandle {
-                        handle: name.into(),
-                    })?
-                    .value();
+            Value::Object(object_value) => {
+                let name = object_value.name();
+                let name: &SymbolValue = ctx.from_value(name.into())?;
+                let name = name.value();
 
                 match name {
                     crate::move_route::OBJECT_NAME => {
-                        visited.remove(&handle);
-                        let value = FromValue::from_value(arena, handle, visited)?;
-
+                        let value = FromValue::from_value(ctx, value)?;
                         Ok(Self::MoveRoute(value))
                     }
                     crate::move_command::OBJECT_NAME => {
-                        visited.remove(&handle);
-                        let value = FromValue::from_value(arena, handle, visited)?;
-
+                        let value = FromValue::from_value(ctx, value)?;
                         Ok(Self::MoveCommand(value))
                     }
                     crate::audio_file::OBJECT_NAME => {
-                        visited.remove(&handle);
-                        let value = FromValue::from_value(arena, handle, visited)?;
-
+                        let value = FromValue::from_value(ctx, value)?;
                         Ok(Self::AudioFile(value))
                     }
                     _ => Err(FromValueError::UnexpectedObjectName { name: name.into() }),
@@ -137,12 +124,8 @@ impl<'a> FromValue<'a> for EventCommandParameter {
             }
             Value::UserDefined(value) => {
                 let name = value.name();
-                let name = arena
-                    .get_symbol(name)
-                    .ok_or(FromValueError::InvalidValueHandle {
-                        handle: name.into(),
-                    })?
-                    .value();
+                let name: &SymbolValue = ctx.from_value(name.into())?;
+                let name = name.value();
 
                 todo!("{name:?}")
             }

@@ -1,11 +1,13 @@
 use ruby_marshal::FromValue;
+use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
 use ruby_marshal::IntoValue;
 use ruby_marshal::IntoValueError;
+use ruby_marshal::SymbolValue;
 use ruby_marshal::UserDefinedValue;
+use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
-use std::collections::HashSet;
 
 #[derive(Debug)]
 pub enum TableFromValueError {
@@ -73,19 +75,11 @@ pub struct Table {
 }
 
 impl<'a> FromValue<'a> for Table {
-    fn from_value(
-        arena: &'a ValueArena,
-        handle: ValueHandle,
-        visited: &mut HashSet<ValueHandle>,
-    ) -> Result<Self, FromValueError> {
-        let user_defined: &UserDefinedValue = FromValue::from_value(arena, handle, visited)?;
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        let user_defined: &UserDefinedValue = FromValue::from_value(ctx, value)?;
         let name = user_defined.name();
-        let name = arena
-            .get_symbol(name)
-            .ok_or(FromValueError::InvalidValueHandle {
-                handle: name.into(),
-            })?
-            .value();
+        let name: &SymbolValue = ctx.from_value(name.into())?;
+        let name = name.value();
 
         if name != USER_DEFINED_NAME {
             return Err(FromValueError::UnexpectedObjectName { name: name.into() });

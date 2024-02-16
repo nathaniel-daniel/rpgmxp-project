@@ -3,13 +3,15 @@ use crate::EventPageCondition;
 use crate::EventPageGraphic;
 use crate::MoveRoute;
 use ruby_marshal::FromValue;
+use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
 use ruby_marshal::IntoValue;
 use ruby_marshal::IntoValueError;
 use ruby_marshal::ObjectValue;
+use ruby_marshal::SymbolValue;
+use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
-use std::collections::HashSet;
 
 const OBJECT_NAME: &[u8] = b"RPG::Event::Page";
 
@@ -45,19 +47,11 @@ pub struct EventPage {
 }
 
 impl<'a> FromValue<'a> for EventPage {
-    fn from_value(
-        arena: &ValueArena,
-        handle: ValueHandle,
-        visited: &mut HashSet<ValueHandle>,
-    ) -> Result<Self, FromValueError> {
-        let object: &ObjectValue = FromValue::from_value(arena, handle, visited)?;
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        let object: &ObjectValue = FromValue::from_value(ctx, value)?;
         let name = object.name();
-        let name = arena
-            .get_symbol(name)
-            .ok_or(FromValueError::InvalidValueHandle {
-                handle: name.into(),
-            })?
-            .value();
+        let name: &SymbolValue = ctx.from_value(name.into())?;
+        let name = name.value();
         if name != OBJECT_NAME {
             return Err(FromValueError::UnexpectedObjectName { name: name.into() });
         }
@@ -79,10 +73,9 @@ impl<'a> FromValue<'a> for EventPage {
         let mut through_field = None;
 
         for (key, value) in instance_variables.iter().copied() {
-            let key = arena
-                .get_symbol(key)
-                .ok_or(FromValueError::InvalidValueHandle { handle: key.into() })?
-                .value();
+            let key: &SymbolValue = ctx.from_value(key.into())?;
+            let key = key.value();
+
             match key {
                 MOVE_TYPE_FIELD => {
                     if move_type_field.is_some() {
@@ -91,7 +84,7 @@ impl<'a> FromValue<'a> for EventPage {
                         });
                     }
 
-                    move_type_field = Some(FromValue::from_value(arena, value, visited)?);
+                    move_type_field = Some(ctx.from_value(value)?);
                 }
                 LIST_FIELD => {
                     if list_field.is_some() {
@@ -100,7 +93,7 @@ impl<'a> FromValue<'a> for EventPage {
                         });
                     }
 
-                    list_field = Some(FromValue::from_value(arena, value, visited)?);
+                    list_field = Some(ctx.from_value(value)?);
                 }
                 CONDITION_FIELD => {
                     if condition_field.is_some() {
@@ -109,7 +102,7 @@ impl<'a> FromValue<'a> for EventPage {
                         });
                     }
 
-                    condition_field = Some(FromValue::from_value(arena, value, visited)?);
+                    condition_field = Some(ctx.from_value(value)?);
                 }
                 DIRECTION_FIX_FIELD => {
                     if direction_fix_field.is_some() {
@@ -118,7 +111,7 @@ impl<'a> FromValue<'a> for EventPage {
                         });
                     }
 
-                    direction_fix_field = Some(FromValue::from_value(arena, value, visited)?);
+                    direction_fix_field = Some(ctx.from_value(value)?);
                 }
                 MOVE_ROUTE_FIELD => {
                     if move_route_field.is_some() {
@@ -127,7 +120,7 @@ impl<'a> FromValue<'a> for EventPage {
                         });
                     }
 
-                    move_route_field = Some(FromValue::from_value(arena, value, visited)?);
+                    move_route_field = Some(ctx.from_value(value)?);
                 }
                 TRIGGER_FIELD => {
                     if trigger_field.is_some() {
@@ -136,7 +129,7 @@ impl<'a> FromValue<'a> for EventPage {
                         });
                     }
 
-                    trigger_field = Some(FromValue::from_value(arena, value, visited)?);
+                    trigger_field = Some(ctx.from_value(value)?);
                 }
                 STEP_ANIME_FIELD => {
                     if step_anime_field.is_some() {
@@ -145,7 +138,7 @@ impl<'a> FromValue<'a> for EventPage {
                         });
                     }
 
-                    step_anime_field = Some(FromValue::from_value(arena, value, visited)?);
+                    step_anime_field = Some(ctx.from_value(value)?);
                 }
                 MOVE_FREQUENCY_FIELD => {
                     if move_frequency_field.is_some() {
@@ -154,7 +147,7 @@ impl<'a> FromValue<'a> for EventPage {
                         });
                     }
 
-                    move_frequency_field = Some(FromValue::from_value(arena, value, visited)?);
+                    move_frequency_field = Some(ctx.from_value(value)?);
                 }
                 GRAPHIC_FIELD => {
                     if graphic_field.is_some() {
@@ -163,7 +156,7 @@ impl<'a> FromValue<'a> for EventPage {
                         });
                     }
 
-                    graphic_field = Some(FromValue::from_value(arena, value, visited)?);
+                    graphic_field = Some(ctx.from_value(value)?);
                 }
                 ALWAYS_ON_TOP_FIELD => {
                     if always_on_top_field.is_some() {
@@ -172,7 +165,7 @@ impl<'a> FromValue<'a> for EventPage {
                         });
                     }
 
-                    always_on_top_field = Some(FromValue::from_value(arena, value, visited)?);
+                    always_on_top_field = Some(ctx.from_value(value)?);
                 }
                 WALK_ANIME_FIELD => {
                     if walk_anime_field.is_some() {
@@ -181,7 +174,7 @@ impl<'a> FromValue<'a> for EventPage {
                         });
                     }
 
-                    walk_anime_field = Some(FromValue::from_value(arena, value, visited)?);
+                    walk_anime_field = Some(ctx.from_value(value)?);
                 }
                 MOVE_SPEED_FIELD => {
                     if move_speed_field.is_some() {
@@ -190,7 +183,7 @@ impl<'a> FromValue<'a> for EventPage {
                         });
                     }
 
-                    move_speed_field = Some(FromValue::from_value(arena, value, visited)?);
+                    move_speed_field = Some(ctx.from_value(value)?);
                 }
                 THROUGH_FIELD => {
                     if through_field.is_some() {
@@ -199,7 +192,7 @@ impl<'a> FromValue<'a> for EventPage {
                         });
                     }
 
-                    through_field = Some(FromValue::from_value(arena, value, visited)?);
+                    through_field = Some(ctx.from_value(value)?);
                 }
                 _ => {
                     return Err(FromValueError::UnknownInstanceVariable { name: key.into() });

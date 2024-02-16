@@ -1,12 +1,14 @@
 use ruby_marshal::FromValue;
+use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
 use ruby_marshal::IntoValue;
 use ruby_marshal::IntoValueError;
 use ruby_marshal::ObjectValue;
 use ruby_marshal::StringValue;
+use ruby_marshal::SymbolValue;
+use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
-use std::collections::HashSet;
 
 pub(crate) const OBJECT_NAME: &[u8] = b"RPG::AudioFile";
 
@@ -28,19 +30,10 @@ pub struct AudioFile {
 }
 
 impl<'a> FromValue<'a> for AudioFile {
-    fn from_value(
-        arena: &'a ValueArena,
-        handle: ValueHandle,
-        visited: &mut HashSet<ValueHandle>,
-    ) -> Result<Self, FromValueError> {
-        let object: &ObjectValue = FromValue::from_value(arena, handle, visited)?;
-        let name = object.name();
-        let name = arena
-            .get_symbol(name)
-            .ok_or(FromValueError::InvalidValueHandle {
-                handle: name.into(),
-            })?
-            .value();
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        let object: &ObjectValue = FromValue::from_value(ctx, value)?;
+        let name: &SymbolValue = ctx.from_value(object.name().into())?;
+        let name = name.value();
 
         let instance_variables = object.instance_variables();
 
@@ -53,10 +46,8 @@ impl<'a> FromValue<'a> for AudioFile {
         let mut pitch_field = None;
 
         for (key, value) in instance_variables.iter().copied() {
-            let key = arena
-                .get_symbol(key)
-                .ok_or(FromValueError::InvalidValueHandle { handle: key.into() })?
-                .value();
+            let key: &SymbolValue = ctx.from_value(key.into())?;
+            let key = key.value();
 
             match key {
                 VOLUME_FIELD => {
@@ -65,7 +56,7 @@ impl<'a> FromValue<'a> for AudioFile {
                             name: VOLUME_FIELD.into(),
                         });
                     }
-                    volume_field = Some(FromValue::from_value(arena, value, visited)?);
+                    volume_field = Some(ctx.from_value(value)?);
                 }
                 NAME_FIELD => {
                     if name_field.is_some() {
@@ -73,7 +64,7 @@ impl<'a> FromValue<'a> for AudioFile {
                             name: NAME_FIELD.into(),
                         });
                     }
-                    let name: &StringValue = FromValue::from_value(arena, value, visited)?;
+                    let name: &StringValue = ctx.from_value(value)?;
                     let name =
                         std::str::from_utf8(name.value()).map_err(FromValueError::new_other)?;
                     name_field = Some(name);
@@ -84,7 +75,7 @@ impl<'a> FromValue<'a> for AudioFile {
                             name: PITCH_FIELD.into(),
                         });
                     }
-                    pitch_field = Some(FromValue::from_value(arena, value, visited)?);
+                    pitch_field = Some(ctx.from_value(value)?);
                 }
                 _ => {
                     return Err(FromValueError::UnknownInstanceVariable { name: key.into() });

@@ -1,8 +1,10 @@
 use ruby_marshal::FromValue;
+use ruby_marshal::FromValueContext;
 use ruby_marshal::IntoValue;
+use ruby_marshal::StringValue;
+use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
-use std::collections::HashSet;
 
 /// Invalid script ruby data
 #[derive(Debug)]
@@ -61,11 +63,10 @@ pub struct Script {
 
 impl<'a> FromValue<'a> for Script {
     fn from_value(
-        arena: &'a ValueArena,
-        handle: ValueHandle,
-        visited: &mut HashSet<ValueHandle>,
+        ctx: &FromValueContext<'a>,
+        value: &Value,
     ) -> Result<Self, ruby_marshal::FromValueError> {
-        let script: &ruby_marshal::ArrayValue = FromValue::from_value(arena, handle, visited)?;
+        let script: &ruby_marshal::ArrayValue = FromValue::from_value(ctx, value)?;
         let script = script.value();
 
         let array_len = script.len();
@@ -73,13 +74,13 @@ impl<'a> FromValue<'a> for Script {
             return Err(InvalidScriptError::InvalidArrayLen { len: array_len }.into());
         }
 
-        let id: i32 = FromValue::from_value(arena, script[0], visited)?;
+        let id: i32 = ctx.from_value(script[0])?;
 
-        let name: &ruby_marshal::StringValue = FromValue::from_value(arena, script[1], visited)?;
+        let name: &StringValue = ctx.from_value(script[1])?;
         let name = std::str::from_utf8(name.value())
             .map_err(|error| InvalidScriptError::InvalidName { error })?;
 
-        let data: &ruby_marshal::StringValue = FromValue::from_value(arena, script[2], visited)?;
+        let data: &StringValue = ctx.from_value(script[2])?;
         let data = data.value();
 
         Ok(Self {

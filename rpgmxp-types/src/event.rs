@@ -1,13 +1,15 @@
 use crate::EventPage;
 use ruby_marshal::FromValue;
+use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
 use ruby_marshal::IntoValue;
 use ruby_marshal::IntoValueError;
 use ruby_marshal::ObjectValue;
 use ruby_marshal::StringValue;
+use ruby_marshal::SymbolValue;
+use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
-use std::collections::HashSet;
 
 const OBJECT_NAME: &[u8] = b"RPG::Event";
 
@@ -27,19 +29,10 @@ pub struct Event {
 }
 
 impl<'a> FromValue<'a> for Event {
-    fn from_value(
-        arena: &ValueArena,
-        handle: ValueHandle,
-        visited: &mut HashSet<ValueHandle>,
-    ) -> Result<Self, FromValueError> {
-        let object: &ObjectValue = FromValue::from_value(arena, handle, visited)?;
-        let name = object.name();
-        let name = arena
-            .get_symbol(name)
-            .ok_or(FromValueError::InvalidValueHandle {
-                handle: name.into(),
-            })?
-            .value();
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        let object: &ObjectValue = FromValue::from_value(ctx, value)?;
+        let name: &SymbolValue = ctx.from_value(object.name().into())?;
+        let name = name.value();
         if name != OBJECT_NAME {
             return Err(FromValueError::UnexpectedObjectName { name: name.into() });
         }
@@ -53,10 +46,9 @@ impl<'a> FromValue<'a> for Event {
         let mut id_field = None;
 
         for (key, value) in instance_variables.iter().copied() {
-            let key = arena
-                .get_symbol(key)
-                .ok_or(FromValueError::InvalidValueHandle { handle: key.into() })?
-                .value();
+            let key: &SymbolValue = ctx.from_value(key.into())?;
+            let key = key.value();
+
             match key {
                 PAGES_FIELD => {
                     if pages_field.is_some() {
@@ -65,7 +57,7 @@ impl<'a> FromValue<'a> for Event {
                         });
                     }
 
-                    pages_field = Some(FromValue::from_value(arena, value, visited)?);
+                    pages_field = Some(ctx.from_value(value)?);
                 }
                 NAME_FIELD => {
                     if name_field.is_some() {
@@ -73,7 +65,7 @@ impl<'a> FromValue<'a> for Event {
                             name: NAME_FIELD.into(),
                         });
                     }
-                    let name: &StringValue = FromValue::from_value(arena, value, visited)?;
+                    let name: &StringValue = ctx.from_value(value)?;
                     let name =
                         std::str::from_utf8(name.value()).map_err(FromValueError::new_other)?;
                     name_field = Some(name);
@@ -85,7 +77,7 @@ impl<'a> FromValue<'a> for Event {
                         });
                     }
 
-                    y_field = Some(FromValue::from_value(arena, value, visited)?);
+                    y_field = Some(ctx.from_value(value)?);
                 }
                 X_FIELD => {
                     if x_field.is_some() {
@@ -94,7 +86,7 @@ impl<'a> FromValue<'a> for Event {
                         });
                     }
 
-                    x_field = Some(FromValue::from_value(arena, value, visited)?);
+                    x_field = Some(ctx.from_value(value)?);
                 }
                 ID_FIELD => {
                     if id_field.is_some() {
@@ -103,7 +95,7 @@ impl<'a> FromValue<'a> for Event {
                         });
                     }
 
-                    id_field = Some(FromValue::from_value(arena, value, visited)?);
+                    id_field = Some(ctx.from_value(value)?);
                 }
                 _ => {
                     return Err(FromValueError::UnknownInstanceVariable { name: key.into() });
