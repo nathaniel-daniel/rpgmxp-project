@@ -161,7 +161,22 @@ impl<'a> FromValue<'a> for EventCommandParameter {
 }
 
 impl IntoValue for EventCommandParameter {
-    fn into_value(self, _: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
-        todo!("IntoValue is stubbed for EventCommandParameter")
+    fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
+        match self {
+            Self::String(value) => Ok(arena.create_string(value.into()).into()),
+            Self::StringArray(value) => {
+                let values: Vec<_> = value
+                    .into_iter()
+                    .map(|value| arena.create_string(value.into()).into())
+                    .collect();
+                Ok(arena.create_array(values).into())
+            }
+            Self::Int(value) => value.into_value(arena),
+            Self::MoveRoute(value) => value.into_value(arena),
+            Self::MoveCommand(value) => value.into_value(arena),
+            Self::AudioFile(value) => value.into_value(arena),
+            Self::Tone(value) => value.into_value(arena),
+            Self::Color(value) => value.into_value(arena),
+        }
     }
 }
