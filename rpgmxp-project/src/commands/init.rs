@@ -1,8 +1,6 @@
 mod map;
-mod scripts;
 
 use self::map::Map;
-use self::scripts::ScriptList;
 use anyhow::ensure;
 use anyhow::Context;
 use std::fmt::Write;
@@ -155,7 +153,7 @@ fn extract_scripts(in_path: &Path, out_dir: &Path) -> anyhow::Result<()> {
     let value_arena = ruby_marshal::load(&*scripts_data)?;
     let ctx = ruby_marshal::FromValueContext::new(&value_arena);
 
-    let script_list: ScriptList = ctx.from_value(value_arena.root())?;
+    let script_list: rpgmxp_types::ScriptList = ctx.from_value(value_arena.root())?;
 
     for (script_index, script) in script_list.scripts.iter().enumerate() {
         let escaped_script_name = escape_file_name(&script.name);

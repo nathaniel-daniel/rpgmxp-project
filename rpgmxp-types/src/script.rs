@@ -1,14 +1,56 @@
 use flate2::bufread::ZlibDecoder;
+use flate2::bufread::ZlibEncoder;
 use ruby_marshal::ArrayValue;
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
 use ruby_marshal::IntoValue;
+use ruby_marshal::IntoValueError;
 use ruby_marshal::StringValue;
 use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
 use std::io::Read;
+
+/// A list of compressed scripts
+#[derive(Debug)]
+pub struct CompressedScriptList {
+    /// Scripts
+    pub scripts: Vec<CompressedScript>,
+}
+
+impl<'a> FromValue<'a> for CompressedScriptList {
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        Ok(Self {
+            scripts: FromValue::from_value(ctx, value)?,
+        })
+    }
+}
+impl IntoValue for CompressedScriptList {
+    fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
+        self.scripts.into_value(arena)
+    }
+}
+
+/// A list of scripts
+#[derive(Debug)]
+pub struct ScriptList {
+    /// Scripts
+    pub scripts: Vec<Script>,
+}
+
+impl<'a> FromValue<'a> for ScriptList {
+    fn from_value(ctx: &FromValueContext<'a>, value: &Value) -> Result<Self, FromValueError> {
+        Ok(Self {
+            scripts: FromValue::from_value(ctx, value)?,
+        })
+    }
+}
+impl IntoValue for ScriptList {
+    fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
+        self.scripts.into_value(arena)
+    }
+}
 
 /// Invalid script ruby data
 #[derive(Debug)]
@@ -93,10 +135,7 @@ impl<'a> FromValue<'a> for CompressedScript {
 }
 
 impl IntoValue for CompressedScript {
-    fn into_value(
-        self,
-        arena: &mut ValueArena,
-    ) -> Result<ValueHandle, ruby_marshal::IntoValueError> {
+    fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
         let id = self.id.into_value(arena)?;
         let name = arena.create_string(self.name.into()).into_raw();
         let data = arena.create_string(self.data).into_raw();
@@ -137,5 +176,24 @@ impl<'a> FromValue<'a> for Script {
             name: script.name,
             data,
         })
+    }
+}
+
+impl IntoValue for Script {
+    fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
+        let id = self.id.into_value(arena)?;
+        let name = arena.create_string(self.name.into()).into_raw();
+
+        let mut encoder = ZlibEncoder::new(self.data.as_bytes(), Default::default());
+        let mut data = Vec::new();
+        encoder
+            .read_to_end(&mut data)
+            .map_err(IntoValueError::new_other)?;
+
+        let data = arena.create_string(data).into_raw();
+
+        let array = arena.create_array(vec![id, name, data]);
+
+        Ok(array.into())
     }
 }
