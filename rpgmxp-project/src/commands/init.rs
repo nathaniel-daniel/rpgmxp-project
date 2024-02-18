@@ -1,6 +1,3 @@
-mod map;
-
-use self::map::Map;
 use anyhow::ensure;
 use anyhow::Context;
 use std::fmt::Write;
@@ -70,7 +67,7 @@ fn copy_data(base_in_path: &Path, base_out_path: &Path) -> anyhow::Result<()> {
             let value_arena = ruby_marshal::load(&*map_data)?;
             let ctx = ruby_marshal::FromValueContext::new(&value_arena);
 
-            let maybe_map: Result<Map, _> = ctx.from_value(value_arena.root());
+            let maybe_map: Result<rpgmxp_types::Map, _> = ctx.from_value(value_arena.root());
 
             if let Err(ruby_marshal::FromValueError::UnexpectedValueKind { kind, trace }) =
                 maybe_map.as_ref()
