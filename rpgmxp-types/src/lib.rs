@@ -22,6 +22,7 @@ pub use self::event_page_condition::EventPageCondition;
 pub use self::event_page_graphic::EventPageGraphic;
 pub use self::move_command::MoveCommand;
 pub use self::move_route::MoveRoute;
+pub use self::script::CompressedScript;
 pub use self::script::Script;
 pub use self::table::Table;
 pub use self::tone::Tone;
