@@ -140,7 +140,6 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "argh",
- "flate2",
  "rpgmxp-types",
  "ruby-marshal",
  "serde",
@@ -151,6 +150,7 @@ dependencies = [
 name = "rpgmxp-types"
 version = "0.0.0"
 dependencies = [
+ "flate2",
  "ruby-marshal",
  "serde",
 ]
