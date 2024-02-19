@@ -123,6 +123,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "nd-util"
+version = "0.0.0"
+source = "git+https://github.com/nathaniel-daniel/nd-util-rs#bde3efbc2c4b57a79c575048a2049ff99e31fb0a"
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.78"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -164,6 +169,7 @@ dependencies = [
  "anyhow",
  "argh",
  "camino",
+ "nd-util",
  "rgssad",
  "rpgmxp-types",
  "ruby-marshal",

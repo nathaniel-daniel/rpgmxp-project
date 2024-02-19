@@ -4,6 +4,10 @@ use self::file_entry_iter::FileEntryIter;
 use anyhow::ensure;
 use anyhow::Context;
 use camino::Utf8Path;
+use rpgmxp_types::Map;
+use ruby_marshal::FromValueContext;
+use std::fs::File;
+use std::path::Path;
 use std::path::PathBuf;
 
 #[derive(Debug, argh::FromArgs)]
@@ -17,10 +21,24 @@ pub struct Options {
         positional,
         description = "the path to the game folder or rgssad archive"
     )]
-    input: PathBuf,
+    pub input: PathBuf,
 
     #[argh(positional, description = "the folder to unpack to")]
-    output: PathBuf,
+    pub output: PathBuf,
+
+    #[argh(
+        switch,
+        long = "skip-extract-scripts",
+        description = "whether scripts should not be extracted"
+    )]
+    pub skip_extract_scripts: bool,
+
+    #[argh(
+        switch,
+        long = "skip-extract-maps",
+        description = "whether maps should not be extracted"
+    )]
+    pub skip_extract_maps: bool,
 }
 
 pub fn exec(mut options: Options) -> anyhow::Result<()> {
@@ -35,20 +53,43 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
 
     let mut file_entry_iter = FileEntryIter::new(&options.input)?;
 
-    while let Some(entry) = file_entry_iter.next_file_entry()? {
+    while let Some(mut entry) = file_entry_iter.next_file_entry()? {
         let raw_relative_path = entry.relative_path();
         let relative_path_components = parse_relative_path(raw_relative_path)?;
         let relative_path_display = relative_path_components.join("/");
         let output_path = {
             let mut output_path = options.output.clone();
-            output_path.extend(relative_path_components);
+            output_path.extend(relative_path_components.clone());
             output_path
         };
 
         eprintln!("Extracting \"{relative_path_display}\"");
 
         if let Some(parent) = output_path.parent() {
-            std::fs::create_dir_all(parent)?;
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create dir at \"{}\"", parent.display()))?;
+        }
+
+        match relative_path_components.as_slice() {
+            ["Data", "Scripts.rxdata"] if !options.skip_extract_scripts => {
+                todo!("extract scripts")
+            }
+            ["Data", file] if !options.skip_extract_maps && is_map_file_name(file) => {
+                extract_map(entry, output_path)?;
+                continue;
+            }
+            _ => {}
+        }
+
+        {
+            let temp_path = nd_util::with_push_extension(&output_path, "temp");
+            // TODO: Lock?
+            // TODO: Drop delete guard for file?
+            let mut output_file = File::create(&temp_path)
+                .with_context(|| format!("failed to open file at \"{}\"", output_path.display()))?;
+
+            std::io::copy(&mut entry, &mut output_file)?;
+            std::fs::rename(&temp_path, &output_path)?;
         }
     }
 
@@ -86,4 +127,33 @@ fn parse_relative_path(path: &Utf8Path) -> anyhow::Result<Vec<&str>> {
     }
 
     Ok(components)
+}
+
+fn is_map_file_name(file_name: &str) -> bool {
+    file_name
+        .strip_suffix(".rxdata")
+        .and_then(|file_name| file_name.strip_prefix("Map"))
+        .map_or(false, |map_n| map_n.chars().all(|c| c.is_ascii_digit()))
+}
+
+fn extract_map<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let path = path.as_ref();
+    let path = path.with_extension("json");
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let map: Map = ctx.from_value(arena.root())?;
+    let map = serde_json::to_string_pretty(&map)?;
+
+    // TODO: Lock?
+    // TODO: Drop delete guard for file?
+    let temp_path = nd_util::with_push_extension(&path, "temp");
+    std::fs::write(&temp_path, map)?;
+
+    std::fs::rename(temp_path, path)?;
+
+    Ok(())
 }
