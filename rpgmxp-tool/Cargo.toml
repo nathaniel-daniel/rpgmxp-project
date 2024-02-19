@@ -1,0 +1,14 @@
+[package]
+name = "rpgmxp-tool"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.79"
+argh = "0.1.12"
+camino = "1.1.6"
+rgssad = { git = "https://github.com/nathaniel-daniel/rgssad-rs", version = "0.0.0" }
+rpgmxp-types = { version = "0.0.0", path = "../rpgmxp-types" }
+ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs", version = "0.0.0" }
+serde_json = "1.0.113"
+walkdir = "2.4.0"
