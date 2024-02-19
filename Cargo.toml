@@ -3,7 +3,5 @@ resolver = "2"
 members = [
     "rpgmxp-project",
     "rpgmxp-types",
+    "rpgmxp-tool",
 ]
-
-# [patch.'https://github.com/nathaniel-daniel/ruby-marshal-rs']
-# ruby-marshal = { git = "https://github.com/nathaniel-daniel//ruby-marshal-rs", branch = "convert" }
