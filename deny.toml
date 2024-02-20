@@ -9,7 +9,10 @@ targets = [
 vulnerability = "deny"
 unmaintained = "deny"
 notice = "deny"
-ignore = []
+ignore = [
+    # Blocked on removing generational-arena from rusby-marshal
+    "RUSTSEC-2024-0014",
+]
 
 [licenses]
 unlicensed = "deny"
@@ -54,4 +57,7 @@ allow-registry = [ "https://github.com/rust-lang/crates.io-index" ]
 allow-git = [
     "https://github.com/nathaniel-daniel/ruby-marshal-rs",
     "https://github.com/nathaniel-daniel//ruby-marshal-rs",
+    
+    "https://github.com/nathaniel-daniel/rgssad-rs",
+    "https://github.com/nathaniel-daniel/nd-util-rs",
 ]

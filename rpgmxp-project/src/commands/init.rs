@@ -59,10 +59,6 @@ fn copy_data(base_in_path: &Path, base_out_path: &Path) -> anyhow::Result<()> {
         });
 
         if let Some(map_number) = map_number {
-            //if file_stem <= "Map001" {
-            //    continue;
-            //}
-
             let map_data = std::fs::read(&in_path)?;
             let value_arena = ruby_marshal::load(&*map_data)?;
             let ctx = ruby_marshal::FromValueContext::new(&value_arena);
