@@ -5,7 +5,9 @@ use anyhow::ensure;
 use anyhow::Context;
 use camino::Utf8Path;
 use rpgmxp_types::Map;
+use rpgmxp_types::ScriptList;
 use ruby_marshal::FromValueContext;
+use std::fmt::Write;
 use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
@@ -47,9 +49,16 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
         .canonicalize()
         .context("failed to canonicalize input path")?;
 
+    ensure!(!options.output.exists(), "output path exists");
+
     // TODO: Should we validate the output in some way?
-    // Prevent writing to the input dir? Ensure it exists?
+    // Prevent writing to the input dir?
     std::fs::create_dir_all(&options.output)?;
+
+    options.output = options
+        .output
+        .canonicalize()
+        .context("failed to canonicalize output path")?;
 
     let mut file_entry_iter = FileEntryIter::new(&options.input)?;
 
@@ -72,7 +81,8 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
 
         match relative_path_components.as_slice() {
             ["Data", "Scripts.rxdata"] if !options.skip_extract_scripts => {
-                todo!("extract scripts")
+                extract_scripts(entry, output_path)?;
+                continue;
             }
             ["Data", file] if !options.skip_extract_maps && is_map_file_name(file) => {
                 extract_map(entry, output_path)?;
@@ -97,7 +107,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
 }
 
 fn parse_relative_path(path: &Utf8Path) -> anyhow::Result<Vec<&str>> {
-    let mut components = Vec::new();
+    let mut components = Vec::with_capacity(4);
 
     // There is a lot of problems with using proper path parsing here.
     //
@@ -127,6 +137,54 @@ fn parse_relative_path(path: &Utf8Path) -> anyhow::Result<Vec<&str>> {
     }
 
     Ok(components)
+}
+
+fn escape_file_name(file_name: &str) -> String {
+    let mut escaped = String::with_capacity(file_name.len());
+    for c in file_name.chars() {
+        match c {
+            '%' | ':' => {
+                let c = u32::from(c);
+                write!(&mut escaped, "%{c:02x}").unwrap();
+            }
+            _ => {
+                escaped.push(c);
+            }
+        }
+    }
+    escaped
+}
+
+fn extract_scripts<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let dir_path = dir_path.as_ref();
+    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
+
+    // TODO: Lock?
+    // TODO: Drop delete guard for file?
+    std::fs::create_dir_all(&temp_dir_path)?;
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let script_list: ScriptList = ctx.from_value(arena.root())?;
+
+    for (script_index, script) in script_list.scripts.iter().enumerate() {
+        let escaped_script_name = escape_file_name(&script.name);
+
+        let out_path = temp_dir_path.join(format!("{script_index}-{escaped_script_name}.rb"));
+        let temp_path = nd_util::with_push_extension(&out_path, "temp");
+
+        // TODO: Lock?
+        // TODO: Drop delete guard for file?
+        std::fs::write(&temp_path, &script.data)?;
+        std::fs::rename(temp_path, out_path)?;
+    }
+
+    std::fs::rename(temp_dir_path, dir_path)?;
+
+    Ok(())
 }
 
 fn is_map_file_name(file_name: &str) -> bool {
