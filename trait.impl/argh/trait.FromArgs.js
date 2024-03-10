@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"rpgmxp_project":[["impl FromArgs for <a class=\"enum\" href=\"rpgmxp_project/enum.Subcommand.html\" title=\"enum rpgmxp_project::Subcommand\">Subcommand</a>"],["impl FromArgs for <a class=\"struct\" href=\"rpgmxp_project/commands/init/struct.Options.html\" title=\"struct rpgmxp_project::commands::init::Options\">Options</a>"],["impl FromArgs for <a class=\"struct\" href=\"rpgmxp_project/struct.Options.html\" title=\"struct rpgmxp_project::Options\">Options</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

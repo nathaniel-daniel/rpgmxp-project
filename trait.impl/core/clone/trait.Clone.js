@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"rpgmxp_types":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.76.0/core/clone/trait.Clone.html\" title=\"trait core::clone::Clone\">Clone</a> for <a class=\"struct\" href=\"rpgmxp_types/script/struct.Script.html\" title=\"struct rpgmxp_types::script::Script\">Script</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.76.0/core/clone/trait.Clone.html\" title=\"trait core::clone::Clone\">Clone</a> for <a class=\"struct\" href=\"rpgmxp_types/script/struct.CompressedScript.html\" title=\"struct rpgmxp_types::script::CompressedScript\">CompressedScript</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

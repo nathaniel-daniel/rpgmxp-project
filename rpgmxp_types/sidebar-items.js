@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["audio_file","color","event","event_command","event_command_parameter","event_page","event_page_condition","event_page_graphic","map","move_command","move_route","script","table","tone"]};
