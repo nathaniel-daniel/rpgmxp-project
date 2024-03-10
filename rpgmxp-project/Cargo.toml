@@ -10,4 +10,4 @@ argh = "0.1.12"
 rpgmxp-types = { path = "../rpgmxp-types" }
 ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs" }
 serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1.0.113"
+serde_json = "1.0.114"
