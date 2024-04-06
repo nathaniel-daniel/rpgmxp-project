@@ -84,9 +84,9 @@ checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 
 [[package]]
 name = "indexmap"
-version = "2.2.3"
+version = "2.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "233cf39063f058ea2caae4091bf4a3ef70a653afbc026f5c4a4135d114e3c177"
+checksum = "168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26"
 dependencies = [
  "equivalent",
  "hashbrown",
@@ -149,7 +149,7 @@ dependencies = [
 [[package]]
 name = "ruby-marshal"
 version = "0.0.0"
-source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs#a2ac56bd016407b70966e2e06f0c5373a5254279"
+source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs#d6d2d13b4428a810e9b336e0bc63efe243d4bbd4"
 dependencies = [
  "indexmap",
  "slotmap",
