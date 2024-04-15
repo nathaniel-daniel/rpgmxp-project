@@ -107,7 +107,7 @@ mod test {
     #[test]
     fn decode_hex_u8_sanity() {
         assert!(decode_hex_u8(b'F') == Some(15));
-        assert!(decode_hex_u8(b'G') == None);
+        assert!(decode_hex_u8(b'G').is_none());
     }
 
     #[test]
