@@ -7,7 +7,6 @@ use camino::Utf8Path;
 use rpgmxp_types::Map;
 use rpgmxp_types::ScriptList;
 use ruby_marshal::FromValueContext;
-use std::fmt::Write;
 use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
@@ -84,7 +83,9 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
                 extract_scripts(entry, output_path)?;
                 continue;
             }
-            ["Data", file] if !options.skip_extract_maps && is_map_file_name(file) => {
+            ["Data", file]
+                if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
+            {
                 extract_map(entry, output_path)?;
                 continue;
             }
@@ -139,22 +140,6 @@ fn parse_relative_path(path: &Utf8Path) -> anyhow::Result<Vec<&str>> {
     Ok(components)
 }
 
-fn escape_file_name(file_name: &str) -> String {
-    let mut escaped = String::with_capacity(file_name.len());
-    for c in file_name.chars() {
-        match c {
-            '%' | ':' => {
-                let c = u32::from(c);
-                write!(&mut escaped, "%{c:02x}").unwrap();
-            }
-            _ => {
-                escaped.push(c);
-            }
-        }
-    }
-    escaped
-}
-
 fn extract_scripts<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
 where
     P: AsRef<Path>,
@@ -171,7 +156,7 @@ where
     let script_list: ScriptList = ctx.from_value(arena.root())?;
 
     for (script_index, script) in script_list.scripts.iter().enumerate() {
-        let escaped_script_name = escape_file_name(&script.name);
+        let escaped_script_name = crate::util::percent_escape_file_name(&script.name);
 
         let out_path = temp_dir_path.join(format!("{script_index}-{escaped_script_name}.rb"));
         let temp_path = nd_util::with_push_extension(&out_path, "temp");
@@ -185,13 +170,6 @@ where
     std::fs::rename(temp_dir_path, dir_path)?;
 
     Ok(())
-}
-
-fn is_map_file_name(file_name: &str) -> bool {
-    file_name
-        .strip_suffix(".rxdata")
-        .and_then(|file_name| file_name.strip_prefix("Map"))
-        .map_or(false, |map_n| map_n.chars().all(|c| c.is_ascii_digit()))
 }
 
 fn extract_map<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
