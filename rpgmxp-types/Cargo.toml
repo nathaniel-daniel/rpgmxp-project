@@ -7,4 +7,4 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 flate2 = "1.0.28"
 ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs" }
-serde = { version = "1.0.193", features = [ "derive" ] }
+serde = { version = "1.0.197", features = [ "derive" ] }
