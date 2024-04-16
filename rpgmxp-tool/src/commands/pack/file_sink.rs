@@ -1,3 +1,4 @@
+use anyhow::Context;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
@@ -14,7 +15,8 @@ pub enum FileSink {
 impl FileSink {
     /// Create a new file sink for a directory
     pub fn new_dir(path: &Path) -> anyhow::Result<Self> {
-        std::fs::create_dir_all(path)?;
+        std::fs::create_dir_all(path)
+            .with_context(|| format!("failed to create dir at \"{}\"", path.display()))?;
 
         // TODO: Maybe use a dir lock?
 
@@ -49,7 +51,11 @@ impl FileSink {
                 let mut path = base_path.clone();
                 path.extend(path_components);
 
-                // TODO: Temp paths.
+                if let Some(parent_path) = path.parent() {
+                    std::fs::create_dir_all(parent_path)?;
+                }
+
+                // TODO: Temp paths?
                 let mut file = File::create_new(path)?;
                 std::io::copy(&mut reader, &mut file)?;
                 file.flush()?;

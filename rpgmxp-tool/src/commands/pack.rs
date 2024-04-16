@@ -15,9 +15,8 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use walkdir::WalkDir;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 enum Format {
-    #[default]
     Dir,
     Rgssad,
 }
@@ -51,9 +50,9 @@ pub struct Options {
         option,
         long = "format",
         short = 'f',
-        description = "the output format"
+        description = "the output format. Defaults to \"rgssad\" if the extension is for an rgssad file. Otherwise, \"dir\" is used."
     )]
-    format: Format,
+    format: Option<Format>,
 }
 
 pub fn exec(mut options: Options) -> anyhow::Result<()> {
@@ -62,7 +61,23 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
         .canonicalize()
         .context("failed to canonicalize input path")?;
 
-    let mut file_sink = match options.format {
+    let format = match options.format {
+        Some(format) => format,
+        None => {
+            let extension = options
+                .output
+                .extension()
+                .map(|extension| extension.to_str().context("non-unicode extension"))
+                .transpose()?;
+            if extension == Some("rgssad") || extension == Some("rgss2a") {
+                Format::Rgssad
+            } else {
+                Format::Dir
+            }
+        }
+    };
+
+    let mut file_sink = match format {
         Format::Dir => FileSink::new_dir(&options.output)?,
         Format::Rgssad => FileSink::new_rgssad(&options.output)?,
     };
@@ -82,9 +97,10 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
 
-        println!("packing \"{}\"", entry_path.display());
         match relative_path_components.as_slice() {
             ["Data", "Scripts.rxdata"] if entry_file_type.is_dir() => {
+                println!("packing \"{}\"", relative_path.display());
+
                 let scripts_rx_data = generate_scripts_rx_data(entry_path)?;
                 let size = u32::try_from(scripts_rx_data.len())?;
 
@@ -94,14 +110,27 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
                 // Ignore entries, we explore them in the above branch.
             }
             ["Data", file] if crate::util::is_map_file_name(file, "json") => {
+                println!("packing \"{}\"", relative_path.display());
+
                 let map_rx_data = generate_map_rx_data(entry_path)?;
                 let size = u32::try_from(map_rx_data.len())?;
+
+                let renamed_file = set_extension_str(file, "rxdata");
+                let mut relative_path_components = relative_path_components.clone();
+                *relative_path_components.last_mut().unwrap() = renamed_file.as_str();
 
                 file_sink.write_file(&relative_path_components, size, &*map_rx_data)?;
             }
             relative_path_components if entry_file_type.is_file() => {
                 // Copy file by default
-                let input_file = File::open(entry_path)?;
+                println!("packing \"{}\"", relative_path.display());
+
+                let input_file = File::open(entry_path).with_context(|| {
+                    format!(
+                        "failed to open input file from \"{}\"",
+                        entry_path.display()
+                    )
+                })?;
                 let metadata = input_file.metadata()?;
                 let size = u32::try_from(metadata.len())?;
 
@@ -114,6 +143,15 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
     file_sink.finish()?;
 
     Ok(())
+}
+
+fn set_extension_str(input: &str, extension: &str) -> String {
+    let stem = input
+        .rsplit_once('.')
+        .map(|(stem, _extension)| stem)
+        .unwrap_or(input);
+
+    format!("{stem}.{extension}")
 }
 
 fn generate_scripts_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
