@@ -166,8 +166,11 @@ fn generate_scripts_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
         let dir_entry_file_name = dir_entry_file_name
             .to_str()
             .context("non-unicode script name")?;
+        let dir_entry_file_stem = dir_entry_file_name
+            .strip_suffix(".rb")
+            .context("script is not an \"rb\" file")?;
 
-        let (script_index, escaped_script_name) = dir_entry_file_name
+        let (script_index, escaped_script_name) = dir_entry_file_stem
             .split_once('-')
             .context("invalid script name format")?;
         let script_index: usize = script_index.parse()?;

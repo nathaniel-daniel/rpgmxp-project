@@ -71,7 +71,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             output_path
         };
 
-        eprintln!("Extracting \"{relative_path_display}\"");
+        eprintln!("extracting \"{relative_path_display}\"");
 
         if let Some(parent) = output_path.parent() {
             std::fs::create_dir_all(parent)
