@@ -141,7 +141,7 @@ impl IntoValue for Event {
         let x_field_key = arena.create_symbol(X_FIELD.into());
         let id_field_key = arena.create_symbol(ID_FIELD.into());
 
-        let pages_field_value = self.y.into_value(arena)?;
+        let pages_field_value = self.pages.into_value(arena)?;
         let name_field_value = arena.create_string(self.name.into()).into();
         let y_field_value = self.y.into_value(arena)?;
         let x_field_value = self.x.into_value(arena)?;
