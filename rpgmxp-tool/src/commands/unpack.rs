@@ -209,7 +209,7 @@ where
         println!("  extracting common event \"{}\"", common_event.name);
 
         let common_event_name = common_event.name.as_str();
-        let out_path = temp_dir_path.join(format!("{common_event_index}-{common_event_name}.rb"));
+        let out_path = temp_dir_path.join(format!("{common_event_index}-{common_event_name}.json"));
         let temp_path = nd_util::with_push_extension(&out_path, "temp");
 
         // TODO: Lock?
@@ -227,51 +227,6 @@ where
 
     Ok(())
 }
-
-/*
-
-    let mut manifest = CommonEventsRxDataManifest {
-        common_events: Vec::new(),
-    };
-
-    let graph = ruby_marshal::load(file)?;
-    let common_events = match &graph[graph.root()] {
-        ruby_marshal::Entry::Array { value } => value,
-        _ => bail!("common events file entry was not an array"),
-    };
-
-    for (i, common_event) in common_events.iter().enumerate() {
-        let common_event = RpgCommonEvent::from_entry(&graph, *common_event)?;
-        let common_event_name = common_event
-            .as_ref()
-            .map(|event| event.name.as_str())
-            .unwrap_or("nil");
-
-        let out_file_name = format!("{i}-{common_event_name}.json");
-        let output_path = path.join(&out_file_name);
-
-        eprintln!("  Extracting Common Event \"{out_file_name}\"");
-
-        let mut file = File::create(&output_path).with_context(|| {
-            format!(
-                "failed to extract common event to \"{}\"",
-                output_path.display()
-            )
-        })?;
-        serde_json::to_writer_pretty(&mut file, &common_event)?;
-
-        manifest
-            .common_events
-            .push(CommonEventsRxDataManifestCommonEvent {
-                path: out_file_name,
-            });
-    }
-
-    let file = File::create(path.join("manifest.json"))?;
-    serde_json::to_writer_pretty(&file, &manifest)?;
-
-    Ok(())
-*/
 
 fn extract_map<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
 where
