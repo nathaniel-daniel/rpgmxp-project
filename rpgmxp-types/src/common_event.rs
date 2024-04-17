@@ -83,7 +83,7 @@ impl<'a> FromValue<'a> for CommonEvent {
                     trigger_field = Some(ctx.from_value(value)?);
                 }
                 SWITCH_ID_FIELD => {
-                    if trigger_field.is_some() {
+                    if switch_id_field.is_some() {
                         return Err(FromValueError::DuplicateInstanceVariable {
                             name: SWITCH_ID_FIELD.into(),
                         });
