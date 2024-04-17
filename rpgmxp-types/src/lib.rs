@@ -1,5 +1,6 @@
 pub mod audio_file;
 pub mod color;
+pub mod common_event;
 pub mod event;
 pub mod event_command;
 pub mod event_command_parameter;
@@ -15,6 +16,7 @@ pub mod tone;
 
 pub use self::audio_file::AudioFile;
 pub use self::color::Color;
+pub use self::common_event::CommonEvent;
 pub use self::event::Event;
 pub use self::event_command::EventCommand;
 pub use self::event_command_parameter::EventCommandParameter;
