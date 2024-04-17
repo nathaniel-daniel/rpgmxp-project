@@ -87,7 +87,6 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
         let entry_file_type = entry.file_type();
         let entry_path = entry.path();
 
-        // TODO: Parse and convert to Windows path?
         let relative_path = entry_path.strip_prefix(&options.input)?;
         let relative_path_components = relative_path
             .components()
