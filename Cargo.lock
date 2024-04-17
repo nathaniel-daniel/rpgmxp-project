@@ -180,7 +180,7 @@ dependencies = [
 [[package]]
 name = "ruby-marshal"
 version = "0.0.0"
-source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs#265b7320bfecf61e4f72bc0b74b0711d7eefdab3"
+source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs#e2caba2050c892a590cf4f28ab15dfaa39f0f090"
 dependencies = [
  "indexmap",
  "slotmap",

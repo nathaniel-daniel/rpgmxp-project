@@ -4,6 +4,7 @@ use self::file_sink::FileSink;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
+use rpgmxp_types::CommonEvent;
 use rpgmxp_types::Script;
 use rpgmxp_types::ScriptList;
 use ruby_marshal::IntoValue;
@@ -108,6 +109,17 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "Scripts.rxdata", ..] => {
                 // Ignore entries, we explore them in the above branch.
             }
+            ["Data", "CommonEvents.rxdata"] if entry_file_type.is_dir() => {
+                println!("packing \"{}\"", relative_path.display());
+
+                let common_events_rx_data = generate_common_events_rx_data(entry_path)?;
+                let size = u32::try_from(common_events_rx_data.len())?;
+
+                file_sink.write_file(&relative_path_components, size, &*common_events_rx_data)?;
+            }
+            ["Data", "CommonEvents.rxdata", ..] => {
+                // Ignore entries, we explore them in the above branch.
+            }
             ["Data", file] if crate::util::is_map_file_name(file, "json") => {
                 println!("packing \"{}\"", relative_path.display());
 
@@ -201,6 +213,57 @@ fn generate_scripts_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
 
     let mut arena = ruby_marshal::ValueArena::new();
     let handle = script_list.into_value(&mut arena)?;
+    arena.replace_root(handle);
+
+    let mut data = Vec::new();
+    ruby_marshal::dump(&mut data, &arena)?;
+
+    Ok(data)
+}
+
+fn generate_common_events_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
+    let mut common_events_map: BTreeMap<usize, CommonEvent> = BTreeMap::new();
+
+    for dir_entry in path.read_dir()? {
+        let dir_entry = dir_entry?;
+        let dir_entry_file_type = dir_entry.file_type()?;
+
+        ensure!(dir_entry_file_type.is_file());
+
+        let dir_entry_file_name = dir_entry.file_name();
+        let dir_entry_file_name = dir_entry_file_name
+            .to_str()
+            .context("non-unicode script name")?;
+        let dir_entry_file_stem = dir_entry_file_name
+            .strip_suffix(".json")
+            .context("common event is not a \"json\" file")?;
+
+        let (common_event_index, common_event_name) = dir_entry_file_stem
+            .split_once('-')
+            .context("invalid common event name format")?;
+        let common_event_index: usize = common_event_index.parse()?;
+
+        println!("  packing script \"{common_event_name}\"");
+
+        let dir_entry_path = dir_entry.path();
+        let common_event_json = std::fs::read_to_string(dir_entry_path)?;
+        let common_event: CommonEvent = serde_json::from_str(&common_event_json)?;
+
+        let old_entry = common_events_map.insert(common_event_index, common_event);
+        if old_entry.is_some() {
+            bail!("duplicate common events for index {common_event_index}");
+        }
+    }
+
+    // TODO: Consider enforcing that common event index ranges cannot have holes and must start at 1.
+    let mut common_events = Vec::with_capacity(common_events_map.len() + 1);
+    common_events.push(None);
+    for common_event in common_events_map.into_values() {
+        common_events.push(Some(common_event));
+    }
+
+    let mut arena = ruby_marshal::ValueArena::new();
+    let handle = common_events.into_value(&mut arena)?;
     arena.replace_root(handle);
 
     let mut data = Vec::new();
