@@ -43,6 +43,14 @@ const TITLE_BGM_FIELD: &[u8] = b"@title_bgm";
 const BUZZER_SE_FIELD: &[u8] = b"@buzzer_se";
 const WINDOWSKIN_NAME_FIELD: &[u8] = b"@windowskin_name";
 const TEST_BATTLERS_FIELD: &[u8] = b"@test_battlers";
+const BATTLEBACK_NAME_FIELD: &[u8] = b"@battleback_name";
+const PARTY_MEMBERS_FIELD: &[u8] = b"@party_members";
+const ACTOR_COLLAPSE_SE_FIELD: &[u8] = b"@actor_collapse_se";
+const GAMEOVER_ME_FIELD: &[u8] = b"@gameover_me";
+const BATTLER_NAME_FIELD: &[u8] = b"@battler_name";
+const SAVE_SE_FIELD: &[u8] = b"@save_se";
+const BATTLE_TRANSITION_FIELD: &[u8] = b"@battle_transition";
+const START_X_FIELD: &[u8] = b"@start_x";
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct System {
@@ -74,6 +82,14 @@ pub struct System {
     pub buzzer_se: AudioFile,
     pub windowskin_name: String,
     pub test_battlers: Vec<SystemTestBattler>,
+    pub battleback_name: String,
+    pub party_members: Vec<i32>,
+    pub actor_collapse_se: AudioFile,
+    pub gameover_me: AudioFile,
+    pub battler_name: String,
+    pub save_se: AudioFile,
+    pub battle_transition: String,
+    pub start_x: i32,
 }
 
 impl<'a> FromValue<'a> for System {
@@ -88,7 +104,6 @@ impl<'a> FromValue<'a> for System {
         }
 
         let instance_variables = object.instance_variables();
-        dbg!(instance_variables.len());
 
         let mut variables_field = None;
         let mut cancel_se_field = None;
@@ -118,6 +133,14 @@ impl<'a> FromValue<'a> for System {
         let mut buzzer_se_field = None;
         let mut windowskin_name_field = None;
         let mut test_battlers_field = None;
+        let mut battleback_name_field = None;
+        let mut party_members_field = None;
+        let mut actor_collapse_se_field = None;
+        let mut gameover_me_field = None;
+        let mut battler_name_field = None;
+        let mut save_se_field = None;
+        let mut battle_transition_field = None;
+        let mut start_x_field = None;
 
         for (key, value) in instance_variables.iter().copied() {
             let key: &SymbolValue = ctx.from_value(key.into())?;
@@ -391,6 +414,79 @@ impl<'a> FromValue<'a> for System {
                     let test_battlers: Vec<SystemTestBattler> = ctx.from_value(value)?;
                     test_battlers_field = Some(test_battlers);
                 }
+                BATTLEBACK_NAME_FIELD => {
+                    if battleback_name_field.is_some() {
+                        return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
+                    }
+
+                    let battleback_name: &StringValue = ctx.from_value(value)?;
+                    let battleback_name = std::str::from_utf8(battleback_name.value())
+                        .map_err(FromValueError::new_other)?
+                        .to_string();
+                    battleback_name_field = Some(battleback_name);
+                }
+                PARTY_MEMBERS_FIELD => {
+                    if party_members_field.is_some() {
+                        return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
+                    }
+
+                    let party_members: Vec<i32> = ctx.from_value(value)?;
+                    party_members_field = Some(party_members);
+                }
+                ACTOR_COLLAPSE_SE_FIELD => {
+                    if actor_collapse_se_field.is_some() {
+                        return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
+                    }
+
+                    let actor_collapse_se: AudioFile = ctx.from_value(value)?;
+                    actor_collapse_se_field = Some(actor_collapse_se);
+                }
+                GAMEOVER_ME_FIELD => {
+                    if gameover_me_field.is_some() {
+                        return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
+                    }
+
+                    let gameover_me: AudioFile = ctx.from_value(value)?;
+                    gameover_me_field = Some(gameover_me);
+                }
+                BATTLER_NAME_FIELD => {
+                    if battler_name_field.is_some() {
+                        return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
+                    }
+
+                    let battler_name: &StringValue = ctx.from_value(value)?;
+                    let battler_name = std::str::from_utf8(battler_name.value())
+                        .map_err(FromValueError::new_other)?
+                        .to_string();
+                    battler_name_field = Some(battler_name);
+                }
+                SAVE_SE_FIELD => {
+                    if save_se_field.is_some() {
+                        return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
+                    }
+
+                    let save_se: AudioFile = ctx.from_value(value)?;
+                    save_se_field = Some(save_se);
+                }
+                BATTLE_TRANSITION_FIELD => {
+                    if battle_transition_field.is_some() {
+                        return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
+                    }
+
+                    let battle_transition: &StringValue = ctx.from_value(value)?;
+                    let battle_transition = std::str::from_utf8(battle_transition.value())
+                        .map_err(FromValueError::new_other)?
+                        .to_string();
+                    battle_transition_field = Some(battle_transition);
+                }
+                START_X_FIELD => {
+                    if start_x_field.is_some() {
+                        return Err(FromValueError::DuplicateInstanceVariable { name: key.into() });
+                    }
+
+                    let start_x: i32 = ctx.from_value(value)?;
+                    start_x_field = Some(start_x);
+                }
                 _ => {
                     return Err(FromValueError::UnknownInstanceVariable { name: key.into() });
                 }
@@ -496,6 +592,36 @@ impl<'a> FromValue<'a> for System {
             test_battlers_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
                 name: TEST_BATTLERS_FIELD.into(),
             })?;
+        let battleback_name =
+            battleback_name_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
+                name: BATTLEBACK_NAME_FIELD.into(),
+            })?;
+        let party_members =
+            party_members_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
+                name: PARTY_MEMBERS_FIELD.into(),
+            })?;
+        let actor_collapse_se =
+            actor_collapse_se_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
+                name: ACTOR_COLLAPSE_SE_FIELD.into(),
+            })?;
+        let gameover_me =
+            gameover_me_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
+                name: GAMEOVER_ME_FIELD.into(),
+            })?;
+        let battler_name =
+            battler_name_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
+                name: BATTLER_NAME_FIELD.into(),
+            })?;
+        let save_se = save_se_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
+            name: SAVE_SE_FIELD.into(),
+        })?;
+        let battle_transition =
+            battle_transition_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
+                name: BATTLE_TRANSITION_FIELD.into(),
+            })?;
+        let start_x = start_x_field.ok_or_else(|| FromValueError::MissingInstanceVariable {
+            name: START_X_FIELD.into(),
+        })?;
 
         Ok(Self {
             variables,
@@ -526,6 +652,14 @@ impl<'a> FromValue<'a> for System {
             buzzer_se,
             windowskin_name,
             test_battlers,
+            battleback_name,
+            party_members,
+            actor_collapse_se,
+            gameover_me,
+            battler_name,
+            save_se,
+            battle_transition,
+            start_x,
         })
     }
 }
