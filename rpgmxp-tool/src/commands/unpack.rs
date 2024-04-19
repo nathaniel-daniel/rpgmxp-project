@@ -244,7 +244,7 @@ where
 {
     let path = path.as_ref();
     let path = path.with_extension("json");
-    
+
     let arena = ruby_marshal::load(file)?;
     let ctx = FromValueContext::new(&arena);
     let system: rpgmxp_types::System = ctx.from_value(arena.root())?;
