@@ -1,3 +1,4 @@
+pub mod actor;
 pub mod audio_file;
 pub mod color;
 pub mod common_event;
@@ -17,6 +18,7 @@ pub mod system_words;
 pub mod table;
 pub mod tone;
 
+pub use self::actor::Actor;
 pub use self::audio_file::AudioFile;
 pub use self::color::Color;
 pub use self::common_event::CommonEvent;

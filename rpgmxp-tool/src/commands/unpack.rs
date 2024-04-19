@@ -51,6 +51,13 @@ pub struct Options {
 
     #[argh(
         switch,
+        long = "skip-extract-actors",
+        description = "whether actors should not be extracted"
+    )]
+    pub skip_extract_actors: bool,
+
+    #[argh(
+        switch,
         long = "skip-extract-maps",
         description = "whether maps should not be extracted"
     )]
@@ -102,6 +109,9 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             }
             ["Data", "System.rxdata"] if !options.skip_extract_system => {
                 extract_system(entry, output_path)?;
+            }
+            ["Data", "Actors.rxdata"] if !options.skip_extract_actors => {
+                extract_actors(entry, output_path)?;
             }
             ["Data", file]
                 if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
@@ -255,6 +265,52 @@ where
     file.flush()?;
     file.sync_all()?;
     std::fs::rename(temp_path, path)?;
+
+    Ok(())
+}
+
+fn extract_actors<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let dir_path = dir_path.as_ref();
+    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
+
+    // TODO: Lock?
+    // TODO: Drop delete guard for file?
+    std::fs::create_dir_all(&temp_dir_path)?;
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let actors: Vec<Option<rpgmxp_types::Actor>> = ctx.from_value(arena.root())?;
+
+    for (actor_index, actor) in actors.iter().enumerate() {
+        if actor_index == 0 {
+            ensure!(actor.is_none(), "actor 0 should be nil");
+
+            continue;
+        }
+
+        let actor = actor.as_ref().context("actor is nil")?;
+
+        println!("  extracting actor \"{}\"", actor.name);
+
+        let actor_name = actor.name.as_str();
+        let out_path = temp_dir_path.join(format!("{actor_index}-{actor_name}.json"));
+        let temp_path = nd_util::with_push_extension(&out_path, "temp");
+
+        // TODO: Lock?
+        // TODO: Drop delete guard for file?
+        let mut output_file = File::create_new(&temp_path)?;
+        serde_json::to_writer_pretty(&mut output_file, actor)?;
+        output_file.flush()?;
+        output_file.sync_all()?;
+        drop(output_file);
+
+        std::fs::rename(temp_path, out_path)?;
+    }
+
+    std::fs::rename(temp_dir_path, dir_path)?;
 
     Ok(())
 }

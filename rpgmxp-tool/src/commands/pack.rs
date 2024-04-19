@@ -4,6 +4,7 @@ use self::file_sink::FileSink;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
+use rpgmxp_types::Actor;
 use rpgmxp_types::CommonEvent;
 use rpgmxp_types::Script;
 use rpgmxp_types::ScriptList;
@@ -131,6 +132,17 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
 
                 file_sink.write_file(&relative_path_components, size, &*system_rx_data)?;
             }
+            ["Data", "Actors.rxdata"] if entry_file_type.is_dir() => {
+                println!("packing \"{}\"", relative_path.display());
+
+                let actors_rx_data = generate_actors_rx_data(entry_path)?;
+                let size = u32::try_from(actors_rx_data.len())?;
+
+                file_sink.write_file(&relative_path_components, size, &*actors_rx_data)?;
+            }
+            ["Data", "Actors.rxdata", ..] => {
+                // Ignore entries, we explore them in the above branch.
+            }
             ["Data", file] if crate::util::is_map_file_name(file, "json") => {
                 println!("packing \"{}\"", relative_path.display());
 
@@ -244,7 +256,7 @@ fn generate_common_events_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
         let dir_entry_file_name = dir_entry.file_name();
         let dir_entry_file_name = dir_entry_file_name
             .to_str()
-            .context("non-unicode script name")?;
+            .context("non-unicode common event name")?;
         let dir_entry_file_stem = dir_entry_file_name
             .strip_suffix(".json")
             .context("common event is not a \"json\" file")?;
@@ -254,7 +266,7 @@ fn generate_common_events_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
             .context("invalid common event name format")?;
         let common_event_index: usize = common_event_index.parse()?;
 
-        println!("  packing script \"{common_event_name}\"");
+        println!("  packing common event \"{common_event_name}\"");
 
         let dir_entry_path = dir_entry.path();
         let common_event_json = std::fs::read_to_string(dir_entry_path)?;
@@ -289,6 +301,57 @@ fn generate_system_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
 
     let mut arena = ruby_marshal::ValueArena::new();
     let handle = system.into_value(&mut arena)?;
+    arena.replace_root(handle);
+
+    let mut data = Vec::new();
+    ruby_marshal::dump(&mut data, &arena)?;
+
+    Ok(data)
+}
+
+fn generate_actors_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
+    let mut actors_map: BTreeMap<usize, Actor> = BTreeMap::new();
+
+    for dir_entry in path.read_dir()? {
+        let dir_entry = dir_entry?;
+        let dir_entry_file_type = dir_entry.file_type()?;
+
+        ensure!(dir_entry_file_type.is_file());
+
+        let dir_entry_file_name = dir_entry.file_name();
+        let dir_entry_file_name = dir_entry_file_name
+            .to_str()
+            .context("non-unicode actor name")?;
+        let dir_entry_file_stem = dir_entry_file_name
+            .strip_suffix(".json")
+            .context("actor is not a \"json\" file")?;
+
+        let (actor_index, actor_name) = dir_entry_file_stem
+            .split_once('-')
+            .context("invalid actor name format")?;
+        let actor_index: usize = actor_index.parse()?;
+
+        println!("  packing script \"{actor_name}\"");
+
+        let dir_entry_path = dir_entry.path();
+        let actor_json = std::fs::read_to_string(dir_entry_path)?;
+        let common_event: Actor = serde_json::from_str(&actor_json)?;
+
+        let old_entry = actors_map.insert(actor_index, common_event);
+        if old_entry.is_some() {
+            bail!("duplicate actors for index {actor_index}");
+        }
+    }
+
+    // TODO: Consider enforcing that actor index ranges cannot have holes and must start at 1.
+    let mut actors = Vec::with_capacity(actors_map.len() + 1);
+    actors.push(None);
+    for actor in actors_map.into_values() {
+        actors.push(Some(actor));
+    }
+
+    let mut arena = ruby_marshal::ValueArena::new();
+    let handle = actors.into_value(&mut arena)?;
     arena.replace_root(handle);
 
     let mut data = Vec::new();
