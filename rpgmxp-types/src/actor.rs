@@ -382,6 +382,81 @@ impl<'a> FromValue<'a> for Actor {
 
 impl IntoValue for Actor {
     fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
-        todo!()
+        let object_name = arena.create_symbol(OBJECT_NAME.into());
+
+        let initial_level_field_key = arena.create_symbol(INITIAL_LEVEL_FIELD.into());
+        let armor4_id_field_key = arena.create_symbol(INITIAL_LEVEL_FIELD.into());
+        let weapon_id_field_key = arena.create_symbol(WEAPON_ID_FIELD.into());
+        let character_name_field_key = arena.create_symbol(CHARACTER_NAME_FIELD.into());
+        let name_field_key = arena.create_symbol(NAME_FIELD.into());
+        let exp_inflation_field_key = arena.create_symbol(EXP_INFLATION_FIELD.into());
+        let parameters_field_key = arena.create_symbol(PARAMETERS_FIELD.into());
+        let armor2_fix_field_key = arena.create_symbol(ARMOR2_FIX_FIELD.into());
+        let class_id_field_key = arena.create_symbol(CLASS_ID_FIELD.into());
+        let armor3_id_field_key = arena.create_symbol(ARMOR3_ID_FIELD.into());
+        let armor1_fix_field_key = arena.create_symbol(ARMOR1_FIX_FIELD.into());
+        let exp_basis_field_key = arena.create_symbol(EXP_BASIS_FIELD.into());
+        let armor2_id_field_key = arena.create_symbol(ARMOR2_ID_FIELD.into());
+        let battler_hue_field_key = arena.create_symbol(BATTLER_HUE_FIELD.into());
+        let armor4_fix_field_key = arena.create_symbol(ARMOR4_FIX_FIELD.into());
+        let final_level_field_key = arena.create_symbol(FINAL_LEVEL_FIELD.into());
+        let weapon_fix_field_key = arena.create_symbol(WEAPON_FIX_FIELD.into());
+        let armor1_id_field_key = arena.create_symbol(ARMOR1_ID_FIELD.into());
+        let id_field_key = arena.create_symbol(ID_FIELD.into());
+        let character_hue_field_key = arena.create_symbol(CHARACTER_HUE_FIELD.into());
+        let battler_name_field_key = arena.create_symbol(BATTLER_NAME_FIELD.into());
+        let armor3_fix_field_key = arena.create_symbol(ARMOR3_FIX_FIELD.into());
+
+        let initial_level_field_value = self.initial_level.into_value(arena)?;
+        let armor4_id_field_value = self.armor4_id.into_value(arena)?;
+        let weapon_id_field_value = self.weapon_id.into_value(arena)?;
+        let character_name_field_value = arena.create_string(self.character_name.into()).into();
+        let name_field_value = arena.create_string(self.name.into()).into();
+        let exp_inflation_field_value = self.exp_inflation.into_value(arena)?;
+        let parameters_field_value = self.parameters.into_value(arena)?;
+        let armor2_fix_field_value = self.armor2_fix.into_value(arena)?;
+        let class_id_field_value = self.class_id.into_value(arena)?;
+        let armor3_id_field_value = self.armor3_id.into_value(arena)?;
+        let armor1_fix_field_value = self.armor1_fix.into_value(arena)?;
+        let exp_basis_field_value = self.exp_basis.into_value(arena)?;
+        let armor2_id_field_value = self.armor2_id.into_value(arena)?;
+        let battler_hue_field_value = self.battler_hue.into_value(arena)?;
+        let armor4_fix_field_value = self.armor4_fix.into_value(arena)?;
+        let final_level_field_value = self.final_level.into_value(arena)?;
+        let weapon_fix_field_value = self.weapon_fix.into_value(arena)?;
+        let armor1_id_field_value = self.armor1_id.into_value(arena)?;
+        let id_field_value = self.id.into_value(arena)?;
+        let character_hue_field_value = self.character_hue.into_value(arena)?;
+        let battler_name_field_value = arena.create_string(self.battler_name.into()).into();
+        let armor3_fix_field_value = self.armor3_fix.into_value(arena)?;
+
+        let fields = vec![
+            (initial_level_field_key, initial_level_field_value),
+            (armor4_id_field_key, armor4_id_field_value),
+            (weapon_id_field_key, weapon_id_field_value),
+            (character_name_field_key, character_name_field_value),
+            (name_field_key, name_field_value),
+            (exp_inflation_field_key, exp_inflation_field_value),
+            (parameters_field_key, parameters_field_value),
+            (armor2_fix_field_key, armor2_fix_field_value),
+            (class_id_field_key, class_id_field_value),
+            (armor3_id_field_key, armor3_id_field_value),
+            (armor1_fix_field_key, armor1_fix_field_value),
+            (exp_basis_field_key, exp_basis_field_value),
+            (armor2_id_field_key, armor2_id_field_value),
+            (battler_hue_field_key, battler_hue_field_value),
+            (armor4_fix_field_key, armor4_fix_field_value),
+            (final_level_field_key, final_level_field_value),
+            (weapon_fix_field_key, weapon_fix_field_value),
+            (armor1_id_field_key, armor1_id_field_value),
+            (id_field_key, id_field_value),
+            (character_hue_field_key, character_hue_field_value),
+            (battler_name_field_key, battler_name_field_value),
+            (armor3_fix_field_key, armor3_fix_field_value),
+        ];
+
+        let object = arena.create_object(object_name, fields);
+
+        Ok(object.into())
     }
 }
