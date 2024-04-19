@@ -666,6 +666,153 @@ impl<'a> FromValue<'a> for System {
 
 impl IntoValue for System {
     fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
-        todo!()
+        let object_name = arena.create_symbol(OBJECT_NAME.into());
+
+        let variables_field_key = arena.create_symbol(VARIABLES_FIELD.into());
+        let cancel_se_field_key = arena.create_symbol(CANCEL_SE_FIELD.into());
+        let magic_number_field_key = arena.create_symbol(MAGIC_NUMBER_FIELD.into());
+        let escape_se_field_key = arena.create_symbol(ESCAPE_SE_FIELD.into());
+        let battle_end_me_field_key = arena.create_symbol(BATTLE_END_ME_FIELD.into());
+        let start_map_id_field_key = arena.create_symbol(START_MAP_ID_FIELD.into());
+        let shop_se_field_key = arena.create_symbol(SHOP_SE_FIELD.into());
+        let gameover_name_field_key = arena.create_symbol(GAMEOVER_NAME_FIELD.into());
+        let words_field_key = arena.create_symbol(WORDS_FIELD.into());
+        let switches_field_key = arena.create_symbol(SWITCHES_FIELD.into());
+        let decision_se_field_key = arena.create_symbol(DECISION_SE_FIELD.into());
+        let edit_map_id_field_key = arena.create_symbol(EDIT_MAP_ID_FIELD.into());
+        let battle_start_se_field_key = arena.create_symbol(BATTLE_START_SE_FIELD.into());
+        let battle_bgm_field_key = arena.create_symbol(BATTLE_BGM_FIELD.into());
+        let test_troop_id_field_key = arena.create_symbol(TEST_TROOP_ID_FIELD.into());
+        let equip_se_field_key = arena.create_symbol(EQUIP_SE_FIELD.into());
+        let title_name_field_key = arena.create_symbol(TITLE_NAME_FIELD.into());
+        let enemy_collapse_se_field_key = arena.create_symbol(ENEMY_COLLAPSE_SE_FIELD.into());
+        let cursor_se_field_key = arena.create_symbol(CURSOR_SE_FIELD.into());
+        let elements_field_key = arena.create_symbol(ELEMENTS_FIELD.into());
+        let underscore_field_key = arena.create_symbol(UNDERSCORE_FIELD.into());
+        let start_y_field_key = arena.create_symbol(START_Y_FIELD.into());
+        let battler_hue_field_key = arena.create_symbol(BATTLER_HUE_FIELD.into());
+        let load_se_field_key = arena.create_symbol(LOAD_SE_FIELD.into());
+        let title_bgm_field_key = arena.create_symbol(TITLE_BGM_FIELD.into());
+        let buzzer_se_field_key = arena.create_symbol(BUZZER_SE_FIELD.into());
+        let windowskin_name_field_key = arena.create_symbol(WINDOWSKIN_NAME_FIELD.into());
+        let test_battlers_field_key = arena.create_symbol(TEST_BATTLERS_FIELD.into());
+        let battleback_name_field_key = arena.create_symbol(BATTLEBACK_NAME_FIELD.into());
+        let party_members_field_key = arena.create_symbol(PARTY_MEMBERS_FIELD.into());
+        let actor_collapse_se_field_key = arena.create_symbol(ACTOR_COLLAPSE_SE_FIELD.into());
+        let gameover_me_field_key = arena.create_symbol(GAMEOVER_ME_FIELD.into());
+        let battler_name_field_key = arena.create_symbol(BATTLER_NAME_FIELD.into());
+        let save_se_field_key = arena.create_symbol(SAVE_SE_FIELD.into());
+        let battle_transition_field_key = arena.create_symbol(BATTLE_TRANSITION_FIELD.into());
+        let start_x_field_key = arena.create_symbol(START_X_FIELD.into());
+
+        let variables_field_value = {
+            let mut variables = Vec::with_capacity(self.variables.len());
+            for variable in self.variables {
+                let handle = match variable {
+                    Some(variable) => arena.create_string(variable.into()).into(),
+                    None => arena.create_nil().into(),
+                };
+                variables.push(handle);
+            }
+
+            arena.create_array(variables).into()
+        };
+        let cancel_se_field_value = self.cancel_se.into_value(arena)?;
+        let magic_number_field_value = self.magic_number.into_value(arena)?;
+        let escape_se_field_value = self.escape_se.into_value(arena)?;
+        let battle_end_me_field_value = self.battle_end_me.into_value(arena)?;
+        let start_map_id_field_value = self.start_map_id.into_value(arena)?;
+        let shop_se_field_value = self.shop_se.into_value(arena)?;
+        let gameover_name_field_value = arena.create_string(self.gameover_name.into()).into();
+        let words_field_value = self.words.into_value(arena)?;
+        let switches_field_value = {
+            let mut switches = Vec::with_capacity(self.switches.len());
+            for switch in self.switches {
+                let handle = match switch {
+                    Some(switch) => arena.create_string(switch.into()).into(),
+                    None => arena.create_nil().into(),
+                };
+                switches.push(handle);
+            }
+
+            arena.create_array(switches).into()
+        };
+        let decision_se_field_value = self.decision_se.into_value(arena)?;
+        let edit_map_id_field_value = self.edit_map_id.into_value(arena)?;
+        let battle_start_se_field_value = self.battle_start_se.into_value(arena)?;
+        let battle_bgm_field_value = self.battle_bgm.into_value(arena)?;
+        let test_troop_id_field_value = self.test_troop_id.into_value(arena)?;
+        let equip_se_field_value = self.equip_se.into_value(arena)?;
+        let title_name_field_value = arena.create_string(self.title_name.into()).into();
+        let enemy_collapse_se_field_value = self.enemy_collapse_se.into_value(arena)?;
+        let cursor_se_field_value = self.cursor_se.into_value(arena)?;
+        let elements_field_value = {
+            let mut elements = Vec::with_capacity(self.elements.len());
+            for element in self.elements {
+                let handle = arena.create_string(element.into()).into();
+                elements.push(handle);
+            }
+            arena.create_array(elements).into()
+        };
+        let underscore_field_value = self.underscore.into_value(arena)?;
+        let start_y_field_value = self.start_y.into_value(arena)?;
+        let battler_hue_field_value = self.battler_hue.into_value(arena)?;
+        let load_se_field_value = self.load_se.into_value(arena)?;
+        let title_bgm_field_value = self.title_bgm.into_value(arena)?;
+        let buzzer_se_field_value = self.buzzer_se.into_value(arena)?;
+        let windowskin_name_field_value = arena.create_string(self.windowskin_name.into()).into();
+        let test_battlers_field_value = self.test_battlers.into_value(arena)?;
+        let battleback_name_field_value = arena.create_string(self.battleback_name.into()).into();
+        let party_members_field_value = self.party_members.into_value(arena)?;
+        let actor_collapse_se_field_value = self.actor_collapse_se.into_value(arena)?;
+        let gameover_me_field_value = self.gameover_me.into_value(arena)?;
+        let battler_name_field_value = arena.create_string(self.battler_name.into()).into();
+        let save_se_field_value = self.save_se.into_value(arena)?;
+        let battle_transition_field_value =
+            arena.create_string(self.battle_transition.into()).into();
+        let start_x_field_value = self.start_x.into_value(arena)?;
+
+        let fields = vec![
+            (variables_field_key, variables_field_value),
+            (cancel_se_field_key, cancel_se_field_value),
+            (magic_number_field_key, magic_number_field_value),
+            (escape_se_field_key, escape_se_field_value),
+            (battle_end_me_field_key, battle_end_me_field_value),
+            (start_map_id_field_key, start_map_id_field_value),
+            (shop_se_field_key, shop_se_field_value),
+            (gameover_name_field_key, gameover_name_field_value),
+            (words_field_key, words_field_value),
+            (switches_field_key, switches_field_value),
+            (decision_se_field_key, decision_se_field_value),
+            (edit_map_id_field_key, edit_map_id_field_value),
+            (battle_start_se_field_key, battle_start_se_field_value),
+            (battle_bgm_field_key, battle_bgm_field_value),
+            (test_troop_id_field_key, test_troop_id_field_value),
+            (equip_se_field_key, equip_se_field_value),
+            (title_name_field_key, title_name_field_value),
+            (enemy_collapse_se_field_key, enemy_collapse_se_field_value),
+            (cursor_se_field_key, cursor_se_field_value),
+            (elements_field_key, elements_field_value),
+            (underscore_field_key, underscore_field_value),
+            (start_y_field_key, start_y_field_value),
+            (battler_hue_field_key, battler_hue_field_value),
+            (load_se_field_key, load_se_field_value),
+            (title_bgm_field_key, title_bgm_field_value),
+            (buzzer_se_field_key, buzzer_se_field_value),
+            (windowskin_name_field_key, windowskin_name_field_value),
+            (test_battlers_field_key, test_battlers_field_value),
+            (battleback_name_field_key, battleback_name_field_value),
+            (party_members_field_key, party_members_field_value),
+            (actor_collapse_se_field_key, actor_collapse_se_field_value),
+            (gameover_me_field_key, gameover_me_field_value),
+            (battler_name_field_key, battler_name_field_value),
+            (save_se_field_key, save_se_field_value),
+            (battle_transition_field_key, battle_transition_field_value),
+            (start_x_field_key, start_x_field_value),
+        ];
+
+        let object = arena.create_object(object_name, fields);
+
+        Ok(object.into())
     }
 }
