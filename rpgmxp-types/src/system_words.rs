@@ -402,6 +402,7 @@ impl<'a> FromValue<'a> for SystemWords {
             item,
             dex,
             armor4,
+
             weapon,
             guard,
         })
@@ -410,6 +411,75 @@ impl<'a> FromValue<'a> for SystemWords {
 
 impl IntoValue for SystemWords {
     fn into_value(self, arena: &mut ValueArena) -> Result<ValueHandle, IntoValueError> {
-        todo!()
+        let object_name = arena.create_symbol(OBJECT_NAME.into());
+
+        let str_field_key = arena.create_symbol(STR_FIELD.into());
+        let armor3_field_key = arena.create_symbol(ARMOR3_FIELD.into());
+        let mdef_field_key = arena.create_symbol(MDEF_FIELD.into());
+        let gold_field_key = arena.create_symbol(GOLD_FIELD.into());
+        let sp_field_key = arena.create_symbol(SP_FIELD.into());
+        let skill_field_key = arena.create_symbol(SKILL_FIELD.into());
+        let int_field_key = arena.create_symbol(INT_FIELD.into());
+        let armor2_field_key = arena.create_symbol(ARMOR2_FIELD.into());
+        let equip_field_key = arena.create_symbol(EQUIP_FIELD.into());
+        let hp_field_key = arena.create_symbol(HP_FIELD.into());
+        let pdef_field_key = arena.create_symbol(PDEF_FIELD.into());
+        let attack_field_key = arena.create_symbol(ATTACK_FIELD.into());
+        let agi_field_key = arena.create_symbol(AGI_FIELD.into());
+        let armor1_field_key = arena.create_symbol(ARMOR1_FIELD.into());
+        let atk_field_key = arena.create_symbol(ATK_FIELD.into());
+        let item_field_key = arena.create_symbol(ITEM_FIELD.into());
+        let dex_field_key = arena.create_symbol(DEX_FIELD.into());
+        let armor4_field_key = arena.create_symbol(ARMOR4_FIELD.into());
+        let weapon_field_key = arena.create_symbol(WEAPON_FIELD.into());
+        let guard_field_key = arena.create_symbol(GUARD_FIELD.into());
+
+        let str_field_value = arena.create_string(self.str_.into()).into();
+        let armor3_field_value = arena.create_string(self.armor3.into()).into();
+        let mdef_field_value = arena.create_string(self.mdef.into()).into();
+        let gold_field_value = arena.create_string(self.gold.into()).into();
+        let sp_field_value = arena.create_string(self.sp.into()).into();
+        let skill_field_value = arena.create_string(self.skill.into()).into();
+        let int_field_value = arena.create_string(self.int.into()).into();
+        let armor2_field_value = arena.create_string(self.armor2.into()).into();
+        let equip_field_value = arena.create_string(self.equip.into()).into();
+        let hp_field_value = arena.create_string(self.hp.into()).into();
+        let pdef_field_value = arena.create_string(self.pdef.into()).into();
+        let attack_field_value = arena.create_string(self.attack.into()).into();
+        let agi_field_value = arena.create_string(self.agi.into()).into();
+        let armor1_field_value = arena.create_string(self.armor1.into()).into();
+        let atk_field_value = arena.create_string(self.atk.into()).into();
+        let item_field_value = arena.create_string(self.item.into()).into();
+        let dex_field_value = arena.create_string(self.dex.into()).into();
+        let armor4_field_value = arena.create_string(self.armor4.into()).into();
+        let weapon_field_value = arena.create_string(self.weapon.into()).into();
+        let guard_field_value = arena.create_string(self.guard.into()).into();
+
+        let fields = vec![
+            (str_field_key, str_field_value),
+            (armor3_field_key, armor3_field_value),
+            (mdef_field_key, mdef_field_value),
+            (gold_field_key, gold_field_value),
+            (sp_field_key, sp_field_value),
+            (skill_field_key, skill_field_value),
+            (int_field_key, int_field_value),
+            (armor2_field_key, armor2_field_value),
+            (equip_field_key, equip_field_value),
+            (hp_field_key, hp_field_value),
+            (pdef_field_key, pdef_field_value),
+            (attack_field_key, attack_field_value),
+            (agi_field_key, agi_field_value),
+            (armor1_field_key, armor1_field_value),
+            (atk_field_key, atk_field_value),
+            (item_field_key, item_field_value),
+            (dex_field_key, dex_field_value),
+            (armor4_field_key, armor4_field_value),
+            (weapon_field_key, weapon_field_value),
+            (guard_field_key, guard_field_value),
+        ];
+
+        let object = arena.create_object(object_name, fields);
+
+        Ok(object.into())
     }
 }
