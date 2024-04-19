@@ -44,6 +44,13 @@ pub struct Options {
 
     #[argh(
         switch,
+        long = "skip-extract-system",
+        description = "whether system data should not be extracted"
+    )]
+    pub skip_extract_system: bool,
+
+    #[argh(
+        switch,
         long = "skip-extract-maps",
         description = "whether maps should not be extracted"
     )]
@@ -92,6 +99,9 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             }
             ["Data", "CommonEvents.rxdata"] if !options.skip_extract_common_events => {
                 extract_common_events(entry, output_path)?;
+            }
+            ["Data", "System.rxdata"] if !options.skip_extract_system => {
+                extract_system(entry, output_path)?;
             }
             ["Data", file]
                 if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
@@ -224,6 +234,27 @@ where
     }
 
     std::fs::rename(temp_dir_path, dir_path)?;
+
+    Ok(())
+}
+
+fn extract_system<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let path = path.as_ref();
+    let path = path.with_extension("json");
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let system: rpgmxp_types::System = ctx.from_value(arena.root())?;
+
+    let temp_path = nd_util::with_push_extension(&path, "temp");
+    let mut file = File::create_new(&temp_path)?;
+    serde_json::to_writer_pretty(&mut file, &system)?;
+    file.flush()?;
+    file.sync_all()?;
+    std::fs::rename(temp_path, path)?;
 
     Ok(())
 }

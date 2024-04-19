@@ -11,6 +11,9 @@ pub mod map;
 pub mod move_command;
 pub mod move_route;
 pub mod script;
+pub mod system;
+pub mod system_test_battler;
+pub mod system_words;
 pub mod table;
 pub mod tone;
 
@@ -30,5 +33,8 @@ pub use self::script::CompressedScript;
 pub use self::script::CompressedScriptList;
 pub use self::script::Script;
 pub use self::script::ScriptList;
+pub use self::system::System;
+pub use self::system_test_battler::SystemTestBattler;
+pub use self::system_words::SystemWords;
 pub use self::table::Table;
 pub use self::tone::Tone;
