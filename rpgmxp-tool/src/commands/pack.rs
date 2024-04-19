@@ -140,7 +140,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
 
                 file_sink.write_file(&relative_path_components, size, &*actors_rx_data)?;
             }
-            ["Data", "Actors.rxdata", ..] if entry_file_type.is_dir() => {
+            ["Data", "Actors.rxdata", ..] => {
                 // Ignore entries, we explore them in the above branch.
             }
             ["Data", file] if crate::util::is_map_file_name(file, "json") => {
