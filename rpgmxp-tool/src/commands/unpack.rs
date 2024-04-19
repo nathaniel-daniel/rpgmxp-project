@@ -309,9 +309,9 @@ where
 
         std::fs::rename(temp_path, out_path)?;
     }
-    
+
     std::fs::rename(temp_dir_path, dir_path)?;
-    
+
     Ok(())
 }
 
