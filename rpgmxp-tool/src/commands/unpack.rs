@@ -13,6 +13,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use rpgmxp_types::Armor;
 
 #[derive(Debug, argh::FromArgs)]
 #[argh(
@@ -71,6 +72,13 @@ pub struct Options {
         description = "whether weapons should not be extracted"
     )]
     pub skip_extract_weapons: bool,
+    
+     #[argh(
+        switch,
+        long = "skip-extract-armors",
+        description = "whether armor should not be extracted"
+    )]
+    pub skip_extract_armors: bool,
 
     #[argh(
         switch,
@@ -137,6 +145,9 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             }
             ["Data", "Weapons.rxdata"] if !options.skip_extract_weapons => {
                 extract_weapons(entry, output_path)?;
+            }
+            ["Data", "Armors.rxdata"] if !options.skip_extract_armors => {
+                extract_armors(entry, output_path)?;
             }
             ["Data", file]
                 if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
@@ -374,6 +385,52 @@ where
         // TODO: Drop delete guard for file?
         let mut output_file = File::create_new(&temp_path)?;
         serde_json::to_writer_pretty(&mut output_file, weapon)?;
+        output_file.flush()?;
+        output_file.sync_all()?;
+        drop(output_file);
+
+        std::fs::rename(temp_path, out_path)?;
+    }
+
+    std::fs::rename(temp_dir_path, dir_path)?;
+
+    Ok(())
+}
+
+fn extract_armors<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let dir_path = dir_path.as_ref();
+    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
+
+    // TODO: Lock?
+    // TODO: Drop delete guard for file?
+    std::fs::create_dir_all(&temp_dir_path)?;
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let armors: Vec<Option<Armor>> = ctx.from_value(arena.root())?;
+
+    for (armor_index, armor) in armors.iter().enumerate() {
+        if armor_index == 0 {
+            ensure!(armor.is_none(), "armor 0 should be nil");
+
+            continue;
+        }
+
+        let armor = armor.as_ref().context("armor is nil")?;
+
+        println!("  extracting armor \"{}\"", armor.name);
+
+        let armor_name = armor.name.as_str();
+        let out_path = temp_dir_path.join(format!("{armor_index}-{armor_name}.json"));
+        let temp_path = nd_util::with_push_extension(&out_path, "temp");
+
+        // TODO: Lock?
+        // TODO: Drop delete guard for file?
+        let mut output_file = File::create_new(&temp_path)?;
+        serde_json::to_writer_pretty(&mut output_file, armor)?;
         output_file.flush()?;
         output_file.sync_all()?;
         drop(output_file);
