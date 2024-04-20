@@ -1,11 +1,13 @@
 mod file_entry_iter;
 
 use self::file_entry_iter::FileEntryIter;
+use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
 use camino::Utf8Path;
 use rpgmxp_types::Map;
 use rpgmxp_types::ScriptList;
+use rpgmxp_types::Weapon;
 use ruby_marshal::FromValueContext;
 use std::fs::File;
 use std::io::Write;
@@ -27,6 +29,13 @@ pub struct Options {
 
     #[argh(positional, description = "the folder to unpack to")]
     pub output: PathBuf,
+
+    #[argh(
+        switch,
+        long = "overwrite",
+        description = "whether overwrite the output directory"
+    )]
+    pub overwrite: bool,
 
     #[argh(
         switch,
@@ -58,6 +67,13 @@ pub struct Options {
 
     #[argh(
         switch,
+        long = "skip-extract-weapons",
+        description = "whether weapons should not be extracted"
+    )]
+    pub skip_extract_weapons: bool,
+
+    #[argh(
+        switch,
         long = "skip-extract-maps",
         description = "whether maps should not be extracted"
     )]
@@ -70,7 +86,13 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
         .canonicalize()
         .context("failed to canonicalize input path")?;
 
-    ensure!(!options.output.exists(), "output path exists");
+    if options.output.try_exists()? {
+        if options.overwrite {
+            std::fs::remove_dir_all(&options.output)?;
+        } else {
+            bail!("output path exists");
+        }
+    }
 
     // TODO: Should we validate the output in some way?
     // Prevent writing to the input dir?
@@ -112,6 +134,9 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             }
             ["Data", "Actors.rxdata"] if !options.skip_extract_actors => {
                 extract_actors(entry, output_path)?;
+            }
+            ["Data", "Weapons.rxdata"] if !options.skip_extract_weapons => {
+                extract_weapons(entry, output_path)?;
             }
             ["Data", file]
                 if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
@@ -303,6 +328,52 @@ where
         // TODO: Drop delete guard for file?
         let mut output_file = File::create_new(&temp_path)?;
         serde_json::to_writer_pretty(&mut output_file, actor)?;
+        output_file.flush()?;
+        output_file.sync_all()?;
+        drop(output_file);
+
+        std::fs::rename(temp_path, out_path)?;
+    }
+
+    std::fs::rename(temp_dir_path, dir_path)?;
+
+    Ok(())
+}
+
+fn extract_weapons<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let dir_path = dir_path.as_ref();
+    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
+
+    // TODO: Lock?
+    // TODO: Drop delete guard for file?
+    std::fs::create_dir_all(&temp_dir_path)?;
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let weapons: Vec<Option<Weapon>> = ctx.from_value(arena.root())?;
+
+    for (weapon_index, weapon) in weapons.iter().enumerate() {
+        if weapon_index == 0 {
+            ensure!(weapon.is_none(), "weapon 0 should be nil");
+
+            continue;
+        }
+
+        let weapon = weapon.as_ref().context("weapon is nil")?;
+
+        println!("  extracting weapon \"{}\"", weapon.name);
+
+        let weapon_name = weapon.name.as_str();
+        let out_path = temp_dir_path.join(format!("{weapon_index}-{weapon_name}.json"));
+        let temp_path = nd_util::with_push_extension(&out_path, "temp");
+
+        // TODO: Lock?
+        // TODO: Drop delete guard for file?
+        let mut output_file = File::create_new(&temp_path)?;
+        serde_json::to_writer_pretty(&mut output_file, weapon)?;
         output_file.flush()?;
         output_file.sync_all()?;
         drop(output_file);

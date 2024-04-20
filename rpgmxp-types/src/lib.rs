@@ -17,6 +17,8 @@ pub mod system_test_battler;
 pub mod system_words;
 pub mod table;
 pub mod tone;
+pub(crate) mod util;
+pub mod weapon;
 
 pub use self::actor::Actor;
 pub use self::audio_file::AudioFile;
@@ -40,3 +42,4 @@ pub use self::system_test_battler::SystemTestBattler;
 pub use self::system_words::SystemWords;
 pub use self::table::Table;
 pub use self::tone::Tone;
+pub use self::weapon::Weapon;

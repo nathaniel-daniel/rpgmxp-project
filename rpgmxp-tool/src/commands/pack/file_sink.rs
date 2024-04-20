@@ -1,3 +1,4 @@
+use anyhow::bail;
 use anyhow::Context;
 use std::fs::File;
 use std::io::Read;
@@ -14,7 +15,15 @@ pub enum FileSink {
 
 impl FileSink {
     /// Create a new file sink for a directory
-    pub fn new_dir(path: &Path) -> anyhow::Result<Self> {
+    pub fn new_dir(path: &Path, overwrite: bool) -> anyhow::Result<Self> {
+        if path.try_exists()? {
+            if overwrite {
+                std::fs::remove_dir_all(path)?;
+            } else {
+                bail!("output path exists");
+            }
+        }
+
         std::fs::create_dir_all(path)
             .with_context(|| format!("failed to create dir at \"{}\"", path.display()))?;
 
@@ -26,7 +35,15 @@ impl FileSink {
     }
 
     /// Create a new file sink for an rgssad file
-    pub fn new_rgssad(path: &Path) -> anyhow::Result<Self> {
+    pub fn new_rgssad(path: &Path, overwrite: bool) -> anyhow::Result<Self> {
+        if path.try_exists()? {
+            if overwrite {
+                std::fs::remove_file(path)?;
+            } else {
+                bail!("output path exists");
+            }
+        }
+
         // TODO: Lock the file?
 
         let file = File::create_new(path)?;
