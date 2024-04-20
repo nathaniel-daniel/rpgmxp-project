@@ -1,4 +1,5 @@
 pub mod actor;
+pub mod armor;
 pub mod audio_file;
 pub mod color;
 pub mod common_event;
@@ -21,6 +22,7 @@ pub(crate) mod util;
 pub mod weapon;
 
 pub use self::actor::Actor;
+pub use self::armor::Armor;
 pub use self::audio_file::AudioFile;
 pub use self::color::Color;
 pub use self::common_event::CommonEvent;
