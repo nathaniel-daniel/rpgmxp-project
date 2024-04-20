@@ -4,6 +4,7 @@ use self::file_sink::FileSink;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
+use rpgmxp_types::Weapon;
 use rpgmxp_types::Actor;
 use rpgmxp_types::CommonEvent;
 use rpgmxp_types::Script;
@@ -55,6 +56,13 @@ pub struct Options {
         description = "the output format. Defaults to \"rgssad\" if the extension is for an rgssad file. Otherwise, \"dir\" is used."
     )]
     format: Option<Format>,
+
+    #[argh(
+        switch,
+        long = "overwrite",
+        description = "whether overwrite the output if it exists"
+    )]
+    pub overwrite: bool,
 }
 
 pub fn exec(mut options: Options) -> anyhow::Result<()> {
@@ -80,8 +88,8 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
     };
 
     let mut file_sink = match format {
-        Format::Dir => FileSink::new_dir(&options.output)?,
-        Format::Rgssad => FileSink::new_rgssad(&options.output)?,
+        Format::Dir => FileSink::new_dir(&options.output, options.overwrite)?,
+        Format::Rgssad => FileSink::new_rgssad(&options.output, options.overwrite)?,
     };
 
     for entry in WalkDir::new(&options.input) {
@@ -141,6 +149,17 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
                 file_sink.write_file(&relative_path_components, size, &*actors_rx_data)?;
             }
             ["Data", "Actors.rxdata", ..] => {
+                // Ignore entries, we explore them in the above branch.
+            }
+            ["Data", "Weapons.rxdata"] if entry_file_type.is_dir() => {
+                println!("packing \"{}\"", relative_path.display());
+
+                let weapons_rx_data = generate_weapons_rx_data(entry_path)?;
+                let size = u32::try_from(weapons_rx_data.len())?;
+
+                file_sink.write_file(&relative_path_components, size, &*weapons_rx_data)?;
+            }
+            ["Data", "Weapons.rxdata", ..] => {
                 // Ignore entries, we explore them in the above branch.
             }
             ["Data", file] if crate::util::is_map_file_name(file, "json") => {
@@ -331,13 +350,13 @@ fn generate_actors_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
             .context("invalid actor name format")?;
         let actor_index: usize = actor_index.parse()?;
 
-        println!("  packing script \"{actor_name}\"");
+        println!("  packing actor \"{actor_name}\"");
 
         let dir_entry_path = dir_entry.path();
         let actor_json = std::fs::read_to_string(dir_entry_path)?;
-        let common_event: Actor = serde_json::from_str(&actor_json)?;
+        let actor: Actor = serde_json::from_str(&actor_json)?;
 
-        let old_entry = actors_map.insert(actor_index, common_event);
+        let old_entry = actors_map.insert(actor_index, actor);
         if old_entry.is_some() {
             bail!("duplicate actors for index {actor_index}");
         }
@@ -347,6 +366,57 @@ fn generate_actors_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
     let mut actors = Vec::with_capacity(actors_map.len() + 1);
     actors.push(None);
     for actor in actors_map.into_values() {
+        actors.push(Some(actor));
+    }
+
+    let mut arena = ruby_marshal::ValueArena::new();
+    let handle = actors.into_value(&mut arena)?;
+    arena.replace_root(handle);
+
+    let mut data = Vec::new();
+    ruby_marshal::dump(&mut data, &arena)?;
+
+    Ok(data)
+}
+
+fn generate_weapons_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
+    let mut weapons_map: BTreeMap<usize, Weapon> = BTreeMap::new();
+
+    for dir_entry in path.read_dir()? {
+        let dir_entry = dir_entry?;
+        let dir_entry_file_type = dir_entry.file_type()?;
+
+        ensure!(dir_entry_file_type.is_file());
+
+        let dir_entry_file_name = dir_entry.file_name();
+        let dir_entry_file_name = dir_entry_file_name
+            .to_str()
+            .context("non-unicode weapon name")?;
+        let dir_entry_file_stem = dir_entry_file_name
+            .strip_suffix(".json")
+            .context("weapon is not a \"json\" file")?;
+
+        let (weapon_index, weapon_name) = dir_entry_file_stem
+            .split_once('-')
+            .context("invalid weapon name format")?;
+        let weapon_index: usize = weapon_index.parse()?;
+
+        println!("  packing weapon \"{weapon_name}\"");
+
+        let dir_entry_path = dir_entry.path();
+        let json = std::fs::read_to_string(dir_entry_path)?;
+        let weapon: Weapon = serde_json::from_str(&json)?;
+
+        let old_entry = weapons_map.insert(weapon_index, weapon);
+        if old_entry.is_some() {
+            bail!("duplicate weapons for index {weapon_index}");
+        }
+    }
+
+    // TODO: Consider enforcing that weapon index ranges cannot have holes and must start at 1.
+    let mut actors = Vec::with_capacity(weapons_map.len() + 1);
+    actors.push(None);
+    for actor in weapons_map.into_values() {
         actors.push(Some(actor));
     }
 
