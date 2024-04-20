@@ -385,7 +385,7 @@ impl IntoValue for Actor {
         let object_name = arena.create_symbol(OBJECT_NAME.into());
 
         let initial_level_field_key = arena.create_symbol(INITIAL_LEVEL_FIELD.into());
-        let armor4_id_field_key = arena.create_symbol(INITIAL_LEVEL_FIELD.into());
+        let armor4_id_field_key = arena.create_symbol(ARMOR4_ID_FIELD.into());
         let weapon_id_field_key = arena.create_symbol(WEAPON_ID_FIELD.into());
         let character_name_field_key = arena.create_symbol(CHARACTER_NAME_FIELD.into());
         let name_field_key = arena.create_symbol(NAME_FIELD.into());
