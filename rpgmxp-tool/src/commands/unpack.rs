@@ -5,15 +5,16 @@ use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
 use camino::Utf8Path;
+use rpgmxp_types::Armor;
 use rpgmxp_types::Map;
 use rpgmxp_types::ScriptList;
+use rpgmxp_types::Skill;
 use rpgmxp_types::Weapon;
 use ruby_marshal::FromValueContext;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
-use rpgmxp_types::Armor;
 
 #[derive(Debug, argh::FromArgs)]
 #[argh(
@@ -72,13 +73,20 @@ pub struct Options {
         description = "whether weapons should not be extracted"
     )]
     pub skip_extract_weapons: bool,
-    
-     #[argh(
+
+    #[argh(
         switch,
         long = "skip-extract-armors",
         description = "whether armor should not be extracted"
     )]
     pub skip_extract_armors: bool,
+
+    #[argh(
+        switch,
+        long = "skip-extract-skills",
+        description = "whether skills should not be extracted"
+    )]
+    pub skip_extract_skills: bool,
 
     #[argh(
         switch,
@@ -148,6 +156,9 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             }
             ["Data", "Armors.rxdata"] if !options.skip_extract_armors => {
                 extract_armors(entry, output_path)?;
+            }
+            ["Data", "Skills.rxdata"] if !options.skip_extract_skills => {
+                extract_skills(entry, output_path)?;
             }
             ["Data", file]
                 if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
@@ -431,6 +442,52 @@ where
         // TODO: Drop delete guard for file?
         let mut output_file = File::create_new(&temp_path)?;
         serde_json::to_writer_pretty(&mut output_file, armor)?;
+        output_file.flush()?;
+        output_file.sync_all()?;
+        drop(output_file);
+
+        std::fs::rename(temp_path, out_path)?;
+    }
+
+    std::fs::rename(temp_dir_path, dir_path)?;
+
+    Ok(())
+}
+
+fn extract_skills<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let dir_path = dir_path.as_ref();
+    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
+
+    // TODO: Lock?
+    // TODO: Drop delete guard for file?
+    std::fs::create_dir_all(&temp_dir_path)?;
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let skills: Vec<Option<Skill>> = ctx.from_value(arena.root())?;
+
+    for (index, skill) in skills.iter().enumerate() {
+        if index == 0 {
+            ensure!(skill.is_none(), "skill 0 should be nil");
+
+            continue;
+        }
+
+        let skill = skill.as_ref().context("skill is nil")?;
+
+        println!("  extracting skill \"{}\"", skill.name);
+
+        let name = skill.name.as_str();
+        let out_path = temp_dir_path.join(format!("{index}-{name}.json"));
+        let temp_path = nd_util::with_push_extension(&out_path, "temp");
+
+        // TODO: Lock?
+        // TODO: Drop delete guard for file?
+        let mut output_file = File::create_new(&temp_path)?;
+        serde_json::to_writer_pretty(&mut output_file, skill)?;
         output_file.flush()?;
         output_file.sync_all()?;
         drop(output_file);

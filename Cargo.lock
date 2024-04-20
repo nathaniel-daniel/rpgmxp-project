@@ -164,6 +164,7 @@ dependencies = [
  "rgssad",
  "rpgmxp-types",
  "ruby-marshal",
+ "serde",
  "serde_json",
  "walkdir",
 ]
