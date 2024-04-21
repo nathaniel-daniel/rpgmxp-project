@@ -10,6 +10,7 @@ use rpgmxp_types::CommonEvent;
 use rpgmxp_types::Script;
 use rpgmxp_types::ScriptList;
 use rpgmxp_types::Skill;
+use rpgmxp_types::State;
 use rpgmxp_types::Weapon;
 use ruby_marshal::IntoValue;
 use std::collections::BTreeMap;
@@ -196,6 +197,17 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
                 file_sink.write_file(&relative_path_components, size, &*skills_rx_data)?;
             }
             ["Data", "Skills.rxdata", ..] => {
+                // Ignore entries, we explore them in the above branch.
+            }
+            ["Data", "States.rxdata"] if entry_file_type.is_dir() => {
+                println!("packing \"{}\"", relative_path.display());
+
+                let states_rx_data = generate_states_rx_data(entry_path)?;
+                let size = u32::try_from(states_rx_data.len())?;
+
+                file_sink.write_file(&relative_path_components, size, &*states_rx_data)?;
+            }
+            ["Data", "States.rxdata", ..] => {
                 // Ignore entries, we explore them in the above branch.
             }
             relative_path_components if entry_file_type.is_file() => {
@@ -535,7 +547,58 @@ fn generate_skills_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
 
         let old_entry = map.insert(index, value);
         if old_entry.is_some() {
-            bail!("duplicate armors for index {index}");
+            bail!("duplicate skills for index {index}");
+        }
+    }
+
+    // TODO: Consider enforcing that value index ranges cannot have holes and must start at 1.
+    let mut data = Vec::with_capacity(map.len() + 1);
+    data.push(None);
+    for actor in map.into_values() {
+        data.push(Some(actor));
+    }
+
+    let mut arena = ruby_marshal::ValueArena::new();
+    let handle = data.into_value(&mut arena)?;
+    arena.replace_root(handle);
+
+    let mut data = Vec::new();
+    ruby_marshal::dump(&mut data, &arena)?;
+
+    Ok(data)
+}
+
+fn generate_states_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
+    let mut map: BTreeMap<usize, State> = BTreeMap::new();
+
+    for dir_entry in path.read_dir()? {
+        let dir_entry = dir_entry?;
+        let dir_entry_file_type = dir_entry.file_type()?;
+
+        ensure!(dir_entry_file_type.is_file());
+
+        let dir_entry_file_name = dir_entry.file_name();
+        let dir_entry_file_name = dir_entry_file_name
+            .to_str()
+            .context("non-unicode state name")?;
+        let dir_entry_file_stem = dir_entry_file_name
+            .strip_suffix(".json")
+            .context("state is not a \"json\" file")?;
+
+        let (index, name) = dir_entry_file_stem
+            .split_once('-')
+            .context("invalid name format")?;
+        let index: usize = index.parse()?;
+
+        println!("  packing state \"{name}\"");
+
+        let dir_entry_path = dir_entry.path();
+        let json = std::fs::read_to_string(dir_entry_path)?;
+        let value: State = serde_json::from_str(&json)?;
+
+        let old_entry = map.insert(index, value);
+        if old_entry.is_some() {
+            bail!("duplicate states for index {index}");
         }
     }
 
