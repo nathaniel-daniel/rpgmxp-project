@@ -23,7 +23,10 @@ pub mod table;
 pub mod tone;
 pub(crate) mod util;
 pub mod weapon;
+pub mod enemy;
+pub mod enemy_action;
 
+pub use self::enemy::Enemy;
 pub use self::actor::Actor;
 pub use self::armor::Armor;
 pub use self::audio_file::AudioFile;
@@ -51,3 +54,4 @@ pub use self::system_words::SystemWords;
 pub use self::table::Table;
 pub use self::tone::Tone;
 pub use self::weapon::Weapon;
+pub use self::enemy_action::EnemyAction;

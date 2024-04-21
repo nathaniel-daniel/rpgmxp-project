@@ -6,6 +6,7 @@ use anyhow::ensure;
 use anyhow::Context;
 use camino::Utf8Path;
 use rpgmxp_types::Armor;
+use rpgmxp_types::Enemy;
 use rpgmxp_types::Item;
 use rpgmxp_types::Map;
 use rpgmxp_types::ScriptList;
@@ -103,6 +104,12 @@ pub struct Options {
         description = "whether items should not be extracted"
     )]
     pub skip_extract_items: bool,
+    #[argh(
+        switch,
+        long = "skip-extract-enemies",
+        description = "whether enemies should not be extracted"
+    )]
+    pub skip_extract_enemies: bool,
 
     #[argh(
         switch,
@@ -181,6 +188,9 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             }
             ["Data", "Items.rxdata"] if !options.skip_extract_items => {
                 extract_items(entry, output_path)?;
+            }
+            ["Data", "Enemies.rxdata"] if !options.skip_extract_enemies => {
+                extract_enemies(entry, output_path)?;
             }
             ["Data", file]
                 if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
@@ -602,6 +612,52 @@ where
         // TODO: Drop delete guard for file?
         let mut output_file = File::create_new(&temp_path)?;
         serde_json::to_writer_pretty(&mut output_file, item)?;
+        output_file.flush()?;
+        output_file.sync_all()?;
+        drop(output_file);
+
+        std::fs::rename(temp_path, out_path)?;
+    }
+
+    std::fs::rename(temp_dir_path, dir_path)?;
+
+    Ok(())
+}
+
+fn extract_enemies<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let dir_path = dir_path.as_ref();
+    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
+
+    // TODO: Lock?
+    // TODO: Drop delete guard for file?
+    std::fs::create_dir_all(&temp_dir_path)?;
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let enemies: Vec<Option<Enemy>> = ctx.from_value(arena.root())?;
+
+    for (index, enemy) in enemies.iter().enumerate() {
+        if index == 0 {
+            ensure!(enemy.is_none(), "enemy 0 should be nil");
+
+            continue;
+        }
+
+        let enemy = enemy.as_ref().context("enemy is nil")?;
+
+        println!("  extracting enemy \"{}\"", enemy.name);
+
+        let name = enemy.name.as_str();
+        let out_path = temp_dir_path.join(format!("{index}-{name}.json"));
+        let temp_path = nd_util::with_push_extension(&out_path, "temp");
+
+        // TODO: Lock?
+        // TODO: Drop delete guard for file?
+        let mut output_file = File::create_new(&temp_path)?;
+        serde_json::to_writer_pretty(&mut output_file, enemy)?;
         output_file.flush()?;
         output_file.sync_all()?;
         drop(output_file);
