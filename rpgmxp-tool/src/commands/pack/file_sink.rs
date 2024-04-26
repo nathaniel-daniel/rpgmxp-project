@@ -5,12 +5,13 @@ use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::io::BufWriter;
 
 /// An abstraction of a file sink over dir and rgssad output formats.
 #[derive(Debug)]
 pub enum FileSink {
     Dir { base_path: PathBuf },
-    Rgssad { writer: rgssad::Writer<File> },
+    Rgssad { writer: rgssad::Writer<BufWriter<File>> },
 }
 
 impl FileSink {
@@ -47,6 +48,7 @@ impl FileSink {
         // TODO: Lock the file?
 
         let file = File::create_new(path)?;
+        let file = BufWriter::new(file);
         let mut writer = rgssad::Writer::new(file);
         writer.write_header()?;
 
@@ -94,8 +96,10 @@ impl FileSink {
         match self {
             Self::Dir { .. } => {}
             Self::Rgssad { writer } => {
-                let file = writer.get_mut();
-                file.flush()?;
+                let buf_writer = writer.get_mut();
+                buf_writer.flush()?;
+                
+                let file = buf_writer.get_mut();
                 file.sync_all()?;
             }
         }
