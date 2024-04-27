@@ -1,3 +1,4 @@
+[graph]
 targets = [
     { triple = "x86_64-unknown-linux-gnu" },
     { triple = "x86_64-unknown-linux-musl" },
@@ -6,22 +7,12 @@ targets = [
 ]
 
 [advisories]
-vulnerability = "deny"
-unmaintained = "deny"
-notice = "deny"
-ignore = [
-    # Blocked on removing generational-arena from rusby-marshal
-    "RUSTSEC-2024-0014",
-]
+ignore = []
 
 [licenses]
-unlicensed = "deny"
-copyleft = "warn"
-allow-osi-fsf-free = "neither"
 confidence-threshold = 0.93
-default = "deny"
 private = { ignore = true }
-allow = [ "Apache-2.0", "MIT", "Zlib", "MPL-2.0", "BSD-3-Clause", "Unicode-DFS-2016" ]
+allow = [ "Apache-2.0", "MIT", "Zlib", "BSD-3-Clause", "Unicode-DFS-2016" ]
 
 [[licenses.clarify]]
 name = "ring"
@@ -56,7 +47,7 @@ unknown-git = "deny"
 allow-registry = [ "https://github.com/rust-lang/crates.io-index" ]
 allow-git = [
     "https://github.com/nathaniel-daniel/ruby-marshal-rs",
-    "https://github.com/nathaniel-daniel//ruby-marshal-rs",
+    # "https://github.com/nathaniel-daniel//ruby-marshal-rs",
     
     "https://github.com/nathaniel-daniel/rgssad-rs",
     "https://github.com/nathaniel-daniel/nd-util-rs",
