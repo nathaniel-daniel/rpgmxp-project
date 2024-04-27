@@ -7,13 +7,13 @@ use anyhow::Context;
 use rpgmxp_types::Actor;
 use rpgmxp_types::Armor;
 use rpgmxp_types::CommonEvent;
+use rpgmxp_types::Enemy;
 use rpgmxp_types::Item;
 use rpgmxp_types::Script;
 use rpgmxp_types::ScriptList;
 use rpgmxp_types::Skill;
 use rpgmxp_types::State;
 use rpgmxp_types::Weapon;
-use rpgmxp_types::Enemy;
 use ruby_marshal::IntoValue;
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -126,32 +126,22 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "CommonEvents.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let common_events_rx_data = generate_common_events_rx_data(entry_path)?;
-                let size = u32::try_from(common_events_rx_data.len())?;
+                let rx_data =
+                    generate_arraylike_rx_data::<CommonEvent>(entry_path, "common event")?;
+                let size = u32::try_from(rx_data.len())?;
 
-                file_sink.write_file(&relative_path_components, size, &*common_events_rx_data)?;
+                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
             }
             ["Data", "CommonEvents.rxdata", ..] => {
                 // Ignore entries, we explore them in the above branch.
             }
-            ["Data", "System.json"] if entry_file_type.is_file() => {
-                println!("packing \"{}\"", relative_path.display());
-
-                let system_rx_data = generate_system_rx_data(entry_path)?;
-                let size = u32::try_from(system_rx_data.len())?;
-
-                let mut relative_path_components = relative_path_components.clone();
-                *relative_path_components.last_mut().unwrap() = "System.rxdata";
-
-                file_sink.write_file(&relative_path_components, size, &*system_rx_data)?;
-            }
             ["Data", "Actors.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let actors_rx_data = generate_actors_rx_data(entry_path)?;
-                let size = u32::try_from(actors_rx_data.len())?;
+                let rx_data = generate_arraylike_rx_data::<Actor>(entry_path, "actor")?;
+                let size = u32::try_from(rx_data.len())?;
 
-                file_sink.write_file(&relative_path_components, size, &*actors_rx_data)?;
+                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
             }
             ["Data", "Actors.rxdata", ..] => {
                 // Ignore entries, we explore them in the above branch.
@@ -159,10 +149,10 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "Weapons.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let weapons_rx_data = generate_weapons_rx_data(entry_path)?;
-                let size = u32::try_from(weapons_rx_data.len())?;
+                let rx_data = generate_arraylike_rx_data::<Weapon>(entry_path, "weapon")?;
+                let size = u32::try_from(rx_data.len())?;
 
-                file_sink.write_file(&relative_path_components, size, &*weapons_rx_data)?;
+                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
             }
             ["Data", "Weapons.rxdata", ..] => {
                 // Ignore entries, we explore them in the above branch.
@@ -170,13 +160,68 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "Armors.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let armors_rx_data = generate_armors_rx_data(entry_path)?;
-                let size = u32::try_from(armors_rx_data.len())?;
+                let rx_data = generate_arraylike_rx_data::<Armor>(entry_path, "armor")?;
+                let size = u32::try_from(rx_data.len())?;
 
-                file_sink.write_file(&relative_path_components, size, &*armors_rx_data)?;
+                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
             }
             ["Data", "Armors.rxdata", ..] => {
                 // Ignore entries, we explore them in the above branch.
+            }
+            ["Data", "Skills.rxdata"] if entry_file_type.is_dir() => {
+                println!("packing \"{}\"", relative_path.display());
+
+                let rx_data = generate_arraylike_rx_data::<Skill>(entry_path, "skill")?;
+                let size = u32::try_from(rx_data.len())?;
+
+                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
+            }
+            ["Data", "Skills.rxdata", ..] => {
+                // Ignore entries, we explore them in the above branch.
+            }
+            ["Data", "States.rxdata"] if entry_file_type.is_dir() => {
+                println!("packing \"{}\"", relative_path.display());
+
+                let rx_data = generate_arraylike_rx_data::<State>(entry_path, "state")?;
+                let size = u32::try_from(rx_data.len())?;
+
+                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
+            }
+            ["Data", "States.rxdata", ..] => {
+                // Ignore entries, we explore them in the above branch.
+            }
+            ["Data", "Items.rxdata"] if entry_file_type.is_dir() => {
+                println!("packing \"{}\"", relative_path.display());
+
+                let rx_data = generate_arraylike_rx_data::<Item>(entry_path, "item")?;
+                let size = u32::try_from(rx_data.len())?;
+
+                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
+            }
+            ["Data", "Items.rxdata", ..] => {
+                // Ignore entries, we explore them in the above branch.
+            }
+            ["Data", "Enemies.rxdata"] if entry_file_type.is_dir() => {
+                println!("packing \"{}\"", relative_path.display());
+
+                let rx_data = generate_arraylike_rx_data::<Enemy>(entry_path, "enemy")?;
+                let size = u32::try_from(rx_data.len())?;
+
+                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
+            }
+            ["Data", "Enemies.rxdata", ..] => {
+                // Ignore entries, we explore them in the above branch.
+            }
+            ["Data", "System.json"] if entry_file_type.is_file() => {
+                println!("packing \"{}\"", relative_path.display());
+
+                let rx_data = generate_system_rx_data(entry_path)?;
+                let size = u32::try_from(rx_data.len())?;
+
+                let mut relative_path_components = relative_path_components.clone();
+                *relative_path_components.last_mut().unwrap() = "System.rxdata";
+
+                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
             }
             ["Data", file] if crate::util::is_map_file_name(file, "json") => {
                 println!("packing \"{}\"", relative_path.display());
@@ -189,50 +234,6 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
                 *relative_path_components.last_mut().unwrap() = renamed_file.as_str();
 
                 file_sink.write_file(&relative_path_components, size, &*map_rx_data)?;
-            }
-            ["Data", "Skills.rxdata"] if entry_file_type.is_dir() => {
-                println!("packing \"{}\"", relative_path.display());
-
-                let skills_rx_data = generate_skills_rx_data(entry_path)?;
-                let size = u32::try_from(skills_rx_data.len())?;
-
-                file_sink.write_file(&relative_path_components, size, &*skills_rx_data)?;
-            }
-            ["Data", "Skills.rxdata", ..] => {
-                // Ignore entries, we explore them in the above branch.
-            }
-            ["Data", "States.rxdata"] if entry_file_type.is_dir() => {
-                println!("packing \"{}\"", relative_path.display());
-
-                let states_rx_data = generate_states_rx_data(entry_path)?;
-                let size = u32::try_from(states_rx_data.len())?;
-
-                file_sink.write_file(&relative_path_components, size, &*states_rx_data)?;
-            }
-            ["Data", "States.rxdata", ..] => {
-                // Ignore entries, we explore them in the above branch.
-            }
-            ["Data", "Items.rxdata"] if entry_file_type.is_dir() => {
-                println!("packing \"{}\"", relative_path.display());
-
-                let items_rx_data = generate_items_rx_data(entry_path)?;
-                let size = u32::try_from(items_rx_data.len())?;
-
-                file_sink.write_file(&relative_path_components, size, &*items_rx_data)?;
-            }
-            ["Data", "Items.rxdata", ..] => {
-                // Ignore entries, we explore them in the above branch.
-            }
-            ["Data", "Enemies.rxdata"] if entry_file_type.is_dir() => {
-                println!("packing \"{}\"", relative_path.display());
-
-                let rx_data = generate_enemies_rx_data(entry_path)?;
-                let size = u32::try_from(rx_data.len())?;
-
-                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-            }
-            ["Data", "Enemies.rxdata", ..] => {
-                // Ignore entries, we explore them in the above branch.
             }
             relative_path_components if entry_file_type.is_file() => {
                 // Copy file by default
@@ -323,8 +324,11 @@ fn generate_scripts_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
     Ok(data)
 }
 
-fn generate_common_events_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
-    let mut common_events_map: BTreeMap<usize, CommonEvent> = BTreeMap::new();
+fn generate_arraylike_rx_data<T>(path: &Path, type_name: &str) -> anyhow::Result<Vec<u8>>
+where
+    T: serde::de::DeserializeOwned + ruby_marshal::IntoValue,
+{
+    let mut map: BTreeMap<usize, T> = BTreeMap::new();
 
     for dir_entry in path.read_dir()? {
         let dir_entry = dir_entry?;
@@ -333,39 +337,37 @@ fn generate_common_events_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
         ensure!(dir_entry_file_type.is_file());
 
         let dir_entry_file_name = dir_entry.file_name();
-        let dir_entry_file_name = dir_entry_file_name
-            .to_str()
-            .context("non-unicode common event name")?;
+        let dir_entry_file_name = dir_entry_file_name.to_str().context("non-unicode name")?;
         let dir_entry_file_stem = dir_entry_file_name
             .strip_suffix(".json")
-            .context("common event is not a \"json\" file")?;
+            .context("not a \"json\" file")?;
 
-        let (common_event_index, common_event_name) = dir_entry_file_stem
+        let (index, name) = dir_entry_file_stem
             .split_once('-')
-            .context("invalid common event name format")?;
-        let common_event_index: usize = common_event_index.parse()?;
+            .context("invalid name format")?;
+        let index: usize = index.parse()?;
 
-        println!("  packing common event \"{common_event_name}\"");
+        println!("  packing {type_name} \"{name}\"");
 
         let dir_entry_path = dir_entry.path();
-        let common_event_json = std::fs::read_to_string(dir_entry_path)?;
-        let common_event: CommonEvent = serde_json::from_str(&common_event_json)?;
+        let json = std::fs::read_to_string(dir_entry_path)?;
+        let value: T = serde_json::from_str(&json)?;
 
-        let old_entry = common_events_map.insert(common_event_index, common_event);
+        let old_entry = map.insert(index, value);
         if old_entry.is_some() {
-            bail!("duplicate common events for index {common_event_index}");
+            bail!("duplicate {type_name} for index {index}");
         }
     }
 
-    // TODO: Consider enforcing that common event index ranges cannot have holes and must start at 1.
-    let mut common_events = Vec::with_capacity(common_events_map.len() + 1);
-    common_events.push(None);
-    for common_event in common_events_map.into_values() {
-        common_events.push(Some(common_event));
+    // TODO: Consider enforcing that value index ranges cannot have holes and must start at 1.
+    let mut data = Vec::with_capacity(map.len() + 1);
+    data.push(None);
+    for value in map.into_values() {
+        data.push(Some(value));
     }
 
     let mut arena = ruby_marshal::ValueArena::new();
-    let handle = common_events.into_value(&mut arena)?;
+    let handle = data.into_value(&mut arena)?;
     arena.replace_root(handle);
 
     let mut data = Vec::new();
@@ -387,364 +389,6 @@ fn generate_system_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
 
     Ok(data)
 }
-
-fn generate_actors_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
-    let mut actors_map: BTreeMap<usize, Actor> = BTreeMap::new();
-
-    for dir_entry in path.read_dir()? {
-        let dir_entry = dir_entry?;
-        let dir_entry_file_type = dir_entry.file_type()?;
-
-        ensure!(dir_entry_file_type.is_file());
-
-        let dir_entry_file_name = dir_entry.file_name();
-        let dir_entry_file_name = dir_entry_file_name
-            .to_str()
-            .context("non-unicode actor name")?;
-        let dir_entry_file_stem = dir_entry_file_name
-            .strip_suffix(".json")
-            .context("actor is not a \"json\" file")?;
-
-        let (actor_index, actor_name) = dir_entry_file_stem
-            .split_once('-')
-            .context("invalid actor name format")?;
-        let actor_index: usize = actor_index.parse()?;
-
-        println!("  packing actor \"{actor_name}\"");
-
-        let dir_entry_path = dir_entry.path();
-        let actor_json = std::fs::read_to_string(dir_entry_path)?;
-        let actor: Actor = serde_json::from_str(&actor_json)?;
-
-        let old_entry = actors_map.insert(actor_index, actor);
-        if old_entry.is_some() {
-            bail!("duplicate actors for index {actor_index}");
-        }
-    }
-
-    // TODO: Consider enforcing that actor index ranges cannot have holes and must start at 1.
-    let mut actors = Vec::with_capacity(actors_map.len() + 1);
-    actors.push(None);
-    for actor in actors_map.into_values() {
-        actors.push(Some(actor));
-    }
-
-    let mut arena = ruby_marshal::ValueArena::new();
-    let handle = actors.into_value(&mut arena)?;
-    arena.replace_root(handle);
-
-    let mut data = Vec::new();
-    ruby_marshal::dump(&mut data, &arena)?;
-
-    Ok(data)
-}
-
-fn generate_weapons_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
-    let mut weapons_map: BTreeMap<usize, Weapon> = BTreeMap::new();
-
-    for dir_entry in path.read_dir()? {
-        let dir_entry = dir_entry?;
-        let dir_entry_file_type = dir_entry.file_type()?;
-
-        ensure!(dir_entry_file_type.is_file());
-
-        let dir_entry_file_name = dir_entry.file_name();
-        let dir_entry_file_name = dir_entry_file_name
-            .to_str()
-            .context("non-unicode weapon name")?;
-        let dir_entry_file_stem = dir_entry_file_name
-            .strip_suffix(".json")
-            .context("weapon is not a \"json\" file")?;
-
-        let (weapon_index, weapon_name) = dir_entry_file_stem
-            .split_once('-')
-            .context("invalid weapon name format")?;
-        let weapon_index: usize = weapon_index.parse()?;
-
-        println!("  packing weapon \"{weapon_name}\"");
-
-        let dir_entry_path = dir_entry.path();
-        let json = std::fs::read_to_string(dir_entry_path)?;
-        let weapon: Weapon = serde_json::from_str(&json)?;
-
-        let old_entry = weapons_map.insert(weapon_index, weapon);
-        if old_entry.is_some() {
-            bail!("duplicate weapons for index {weapon_index}");
-        }
-    }
-
-    // TODO: Consider enforcing that weapon index ranges cannot have holes and must start at 1.
-    let mut actors = Vec::with_capacity(weapons_map.len() + 1);
-    actors.push(None);
-    for actor in weapons_map.into_values() {
-        actors.push(Some(actor));
-    }
-
-    let mut arena = ruby_marshal::ValueArena::new();
-    let handle = actors.into_value(&mut arena)?;
-    arena.replace_root(handle);
-
-    let mut data = Vec::new();
-    ruby_marshal::dump(&mut data, &arena)?;
-
-    Ok(data)
-}
-
-fn generate_armors_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
-    let mut map: BTreeMap<usize, Armor> = BTreeMap::new();
-
-    for dir_entry in path.read_dir()? {
-        let dir_entry = dir_entry?;
-        let dir_entry_file_type = dir_entry.file_type()?;
-
-        ensure!(dir_entry_file_type.is_file());
-
-        let dir_entry_file_name = dir_entry.file_name();
-        let dir_entry_file_name = dir_entry_file_name
-            .to_str()
-            .context("non-unicode armor name")?;
-        let dir_entry_file_stem = dir_entry_file_name
-            .strip_suffix(".json")
-            .context("armor is not a \"json\" file")?;
-
-        let (armor_index, armor_name) = dir_entry_file_stem
-            .split_once('-')
-            .context("invalid armor name format")?;
-        let armor_index: usize = armor_index.parse()?;
-
-        println!("  packing armor \"{armor_name}\"");
-
-        let dir_entry_path = dir_entry.path();
-        let json = std::fs::read_to_string(dir_entry_path)?;
-        let armor: Armor = serde_json::from_str(&json)?;
-
-        let old_entry = map.insert(armor_index, armor);
-        if old_entry.is_some() {
-            bail!("duplicate armors for index {armor_index}");
-        }
-    }
-
-    // TODO: Consider enforcing that armor index ranges cannot have holes and must start at 1.
-    let mut data = Vec::with_capacity(map.len() + 1);
-    data.push(None);
-    for actor in map.into_values() {
-        data.push(Some(actor));
-    }
-
-    let mut arena = ruby_marshal::ValueArena::new();
-    let handle = data.into_value(&mut arena)?;
-    arena.replace_root(handle);
-
-    let mut data = Vec::new();
-    ruby_marshal::dump(&mut data, &arena)?;
-
-    Ok(data)
-}
-
-fn generate_skills_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
-    let mut map: BTreeMap<usize, Skill> = BTreeMap::new();
-
-    for dir_entry in path.read_dir()? {
-        let dir_entry = dir_entry?;
-        let dir_entry_file_type = dir_entry.file_type()?;
-
-        ensure!(dir_entry_file_type.is_file());
-
-        let dir_entry_file_name = dir_entry.file_name();
-        let dir_entry_file_name = dir_entry_file_name
-            .to_str()
-            .context("non-unicode skill name")?;
-        let dir_entry_file_stem = dir_entry_file_name
-            .strip_suffix(".json")
-            .context("skill is not a \"json\" file")?;
-
-        let (index, name) = dir_entry_file_stem
-            .split_once('-')
-            .context("invalid name format")?;
-        let index: usize = index.parse()?;
-
-        println!("  packing skill \"{name}\"");
-
-        let dir_entry_path = dir_entry.path();
-        let json = std::fs::read_to_string(dir_entry_path)?;
-        let value: Skill = serde_json::from_str(&json)?;
-
-        let old_entry = map.insert(index, value);
-        if old_entry.is_some() {
-            bail!("duplicate skills for index {index}");
-        }
-    }
-
-    // TODO: Consider enforcing that value index ranges cannot have holes and must start at 1.
-    let mut data = Vec::with_capacity(map.len() + 1);
-    data.push(None);
-    for actor in map.into_values() {
-        data.push(Some(actor));
-    }
-
-    let mut arena = ruby_marshal::ValueArena::new();
-    let handle = data.into_value(&mut arena)?;
-    arena.replace_root(handle);
-
-    let mut data = Vec::new();
-    ruby_marshal::dump(&mut data, &arena)?;
-
-    Ok(data)
-}
-
-fn generate_states_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
-    let mut map: BTreeMap<usize, State> = BTreeMap::new();
-
-    for dir_entry in path.read_dir()? {
-        let dir_entry = dir_entry?;
-        let dir_entry_file_type = dir_entry.file_type()?;
-
-        ensure!(dir_entry_file_type.is_file());
-
-        let dir_entry_file_name = dir_entry.file_name();
-        let dir_entry_file_name = dir_entry_file_name
-            .to_str()
-            .context("non-unicode state name")?;
-        let dir_entry_file_stem = dir_entry_file_name
-            .strip_suffix(".json")
-            .context("state is not a \"json\" file")?;
-
-        let (index, name) = dir_entry_file_stem
-            .split_once('-')
-            .context("invalid name format")?;
-        let index: usize = index.parse()?;
-
-        println!("  packing state \"{name}\"");
-
-        let dir_entry_path = dir_entry.path();
-        let json = std::fs::read_to_string(dir_entry_path)?;
-        let value: State = serde_json::from_str(&json)?;
-
-        let old_entry = map.insert(index, value);
-        if old_entry.is_some() {
-            bail!("duplicate states for index {index}");
-        }
-    }
-
-    // TODO: Consider enforcing that value index ranges cannot have holes and must start at 1.
-    let mut data = Vec::with_capacity(map.len() + 1);
-    data.push(None);
-    for actor in map.into_values() {
-        data.push(Some(actor));
-    }
-
-    let mut arena = ruby_marshal::ValueArena::new();
-    let handle = data.into_value(&mut arena)?;
-    arena.replace_root(handle);
-
-    let mut data = Vec::new();
-    ruby_marshal::dump(&mut data, &arena)?;
-
-    Ok(data)
-}
-
-fn generate_items_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
-    let mut map: BTreeMap<usize, Item> = BTreeMap::new();
-
-    for dir_entry in path.read_dir()? {
-        let dir_entry = dir_entry?;
-        let dir_entry_file_type = dir_entry.file_type()?;
-
-        ensure!(dir_entry_file_type.is_file());
-
-        let dir_entry_file_name = dir_entry.file_name();
-        let dir_entry_file_name = dir_entry_file_name
-            .to_str()
-            .context("non-unicode item name")?;
-        let dir_entry_file_stem = dir_entry_file_name
-            .strip_suffix(".json")
-            .context("item is not a \"json\" file")?;
-
-        let (index, name) = dir_entry_file_stem
-            .split_once('-')
-            .context("invalid name format")?;
-        let index: usize = index.parse()?;
-
-        println!("  packing item \"{name}\"");
-
-        let dir_entry_path = dir_entry.path();
-        let json = std::fs::read_to_string(dir_entry_path)?;
-        let value: Item = serde_json::from_str(&json)?;
-
-        let old_entry = map.insert(index, value);
-        if old_entry.is_some() {
-            bail!("duplicate items for index {index}");
-        }
-    }
-
-    // TODO: Consider enforcing that value index ranges cannot have holes and must start at 1.
-    let mut data = Vec::with_capacity(map.len() + 1);
-    data.push(None);
-    for actor in map.into_values() {
-        data.push(Some(actor));
-    }
-
-    let mut arena = ruby_marshal::ValueArena::new();
-    let handle = data.into_value(&mut arena)?;
-    arena.replace_root(handle);
-
-    let mut data = Vec::new();
-    ruby_marshal::dump(&mut data, &arena)?;
-
-    Ok(data)
-}
-
-fn generate_enemies_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
-    let mut map: BTreeMap<usize, Enemy> = BTreeMap::new();
-
-    for dir_entry in path.read_dir()? {
-        let dir_entry = dir_entry?;
-        let dir_entry_file_type = dir_entry.file_type()?;
-
-        ensure!(dir_entry_file_type.is_file());
-
-        let dir_entry_file_name = dir_entry.file_name();
-        let dir_entry_file_name = dir_entry_file_name
-            .to_str()
-            .context("non-unicode enemy name")?;
-        let dir_entry_file_stem = dir_entry_file_name
-            .strip_suffix(".json")
-            .context("enemy is not a \"json\" file")?;
-
-        let (index, name) = dir_entry_file_stem
-            .split_once('-')
-            .context("invalid name format")?;
-        let index: usize = index.parse()?;
-
-        println!("  packing enemy \"{name}\"");
-
-        let dir_entry_path = dir_entry.path();
-        let json = std::fs::read_to_string(dir_entry_path)?;
-        let value: Enemy = serde_json::from_str(&json)?;
-
-        let old_entry = map.insert(index, value);
-        if old_entry.is_some() {
-            bail!("duplicate enemies for index {index}");
-        }
-    }
-
-    // TODO: Consider enforcing that value index ranges cannot have holes and must start at 1.
-    let mut data = Vec::with_capacity(map.len() + 1);
-    data.push(None);
-    for actor in map.into_values() {
-        data.push(Some(actor));
-    }
-
-    let mut arena = ruby_marshal::ValueArena::new();
-    let handle = data.into_value(&mut arena)?;
-    arena.replace_root(handle);
-
-    let mut data = Vec::new();
-    ruby_marshal::dump(&mut data, &arena)?;
-
-    Ok(data)
-}
-
 
 fn generate_map_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
     let map = std::fs::read_to_string(path)?;

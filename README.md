@@ -1,9 +1,14 @@
 # rpgxp-project
 
+## rpgmxp-tool
+`rpgmxp-tool` is a CLI to read and write RPGMaker XP game files.
+This includes rgssad and rxdata files.
+Currently, it is NOT capable of byte-for-byte round-tripping game files, but repacked files work normally in games.
+This is due to differences in compression and the fact that this library does not dedupe game assets as much as it needs to.
+
 ## Notes
 The following objects can be deduped inside an archive:
  * String (what cases?)
- * Symbols (Should be done by default)
  * MoveCommands
  
 ## Resources

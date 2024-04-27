@@ -1,5 +1,5 @@
-use crate::Table;
 use crate::EnemyAction;
+use crate::Table;
 
 #[derive(
     Debug,
