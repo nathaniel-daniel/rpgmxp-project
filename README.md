@@ -6,6 +6,21 @@ This includes rgssad and rxdata files.
 Currently, it is NOT capable of byte-for-byte round-tripping game files, but repacked files work normally in games.
 This is due to differences in compression and the fact that this library does not dedupe game assets as much as it needs to.
 
+### Usage
+```bash
+# Unpacking a game
+rpgmxp-tool unpack path/to/game/dir unpacked
+
+# Unpacking an rgssad
+rpgmxp-tool unpack path/to/game/dir/Game.rgssad unpacked
+
+# Packing a game
+rpgmxp-tool pack unpacked path/to/new/dir
+
+# Packing an rgssad
+rpgmxp-tool pack unpacked path/to/new/dir/Game.rgssad
+```
+
 ## Notes
 The following objects can be deduped inside an archive:
  * String (what cases?)
