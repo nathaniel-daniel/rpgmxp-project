@@ -1,17 +1,21 @@
 use anyhow::bail;
 use anyhow::Context;
 use std::fs::File;
+use std::io::BufWriter;
 use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
-use std::io::BufWriter;
 
 /// An abstraction of a file sink over dir and rgssad output formats.
 #[derive(Debug)]
 pub enum FileSink {
-    Dir { base_path: PathBuf },
-    Rgssad { writer: rgssad::Writer<BufWriter<File>> },
+    Dir {
+        base_path: PathBuf,
+    },
+    Rgssad {
+        writer: rgssad::Writer<BufWriter<File>>,
+    },
 }
 
 impl FileSink {
@@ -98,7 +102,7 @@ impl FileSink {
             Self::Rgssad { writer } => {
                 let buf_writer = writer.get_mut();
                 buf_writer.flush()?;
-                
+
                 let file = buf_writer.get_mut();
                 file.sync_all()?;
             }
