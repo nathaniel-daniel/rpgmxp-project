@@ -328,9 +328,10 @@ fn generate_arraylike_rx_data<T>(path: &Path, type_name: &str) -> anyhow::Result
 where
     T: serde::de::DeserializeOwned + ruby_marshal::IntoValue,
 {
-    let mut map: BTreeMap<usize, T> = BTreeMap::new();
-
-    for dir_entry in path.read_dir()? {
+    fn load_json_str(
+        dir_entry: std::io::Result<std::fs::DirEntry>,
+        type_name: &str,
+    ) -> anyhow::Result<(usize, String)> {
         let dir_entry = dir_entry?;
         let dir_entry_file_type = dir_entry.file_type()?;
 
@@ -351,6 +352,14 @@ where
 
         let dir_entry_path = dir_entry.path();
         let json = std::fs::read_to_string(dir_entry_path)?;
+
+        Ok((index, json))
+    }
+
+    let mut map: BTreeMap<usize, T> = BTreeMap::new();
+
+    for dir_entry in path.read_dir()? {
+        let (index, json) = load_json_str(dir_entry, type_name)?;
         let value: T = serde_json::from_str(&json)?;
 
         let old_entry = map.insert(index, value);
