@@ -190,7 +190,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
                 extract_items(entry, output_path)?;
             }
             ["Data", "Enemies.rxdata"] if !options.skip_extract_enemies => {
-                extract_enemies(entry, output_path)?;
+                extract_arraylike::<Enemy>(entry, output_path)?;
             }
             ["Data", file]
                 if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
@@ -624,48 +624,66 @@ where
     Ok(())
 }
 
-fn extract_enemies<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
+trait ArrayLikeElement<'a>: serde::Serialize + ruby_marshal::FromValue<'a> {
+    /// Get the display name of this type
+    fn type_display_name() -> &'static str;
+
+    /// Get the name of this element.
+    fn name(&self) -> &str;
+}
+
+impl ArrayLikeElement<'_> for Enemy {
+    fn type_display_name() -> &'static str {
+        "enemy"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+fn extract_arraylike<T>(file: impl std::io::Read, dir_path: impl AsRef<Path>) -> anyhow::Result<()>
 where
-    P: AsRef<Path>,
+    T: for<'a> ArrayLikeElement<'a>,
 {
     let dir_path = dir_path.as_ref();
-    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
-
-    // TODO: Lock?
-    // TODO: Drop delete guard for file?
-    std::fs::create_dir_all(&temp_dir_path)?;
+    let type_display_name = T::type_display_name();
+    
+    std::fs::create_dir_all(&dir_path)?;
 
     let arena = ruby_marshal::load(file)?;
     let ctx = FromValueContext::new(&arena);
-    let enemies: Vec<Option<Enemy>> = ctx.from_value(arena.root())?;
+    let array: Vec<Option<T>> = ctx.from_value(arena.root())?;
 
-    for (index, enemy) in enemies.iter().enumerate() {
+    for (index, value) in array.iter().enumerate() {
         if index == 0 {
-            ensure!(enemy.is_none(), "enemy 0 should be nil");
+            ensure!(value.is_none(), "{type_display_name} 0 should be nil");
 
             continue;
         }
 
-        let enemy = enemy.as_ref().context("enemy is nil")?;
+        let value = value.as_ref().with_context(|| format!("{type_display_name} is nil"))?;
 
-        println!("  extracting enemy \"{}\"", enemy.name);
+        println!(
+            "  extracting {} \"{}\"",
+            type_display_name,
+            value.name()
+        );
 
-        let name = enemy.name.as_str();
-        let out_path = temp_dir_path.join(format!("{index}-{name}.json"));
+        let name = value.name();
+        let out_path = dir_path.join(format!("{index}-{name}.json"));
         let temp_path = nd_util::with_push_extension(&out_path, "temp");
 
         // TODO: Lock?
         // TODO: Drop delete guard for file?
         let mut output_file = File::create_new(&temp_path)?;
-        serde_json::to_writer_pretty(&mut output_file, enemy)?;
+        serde_json::to_writer_pretty(&mut output_file, value)?;
         output_file.flush()?;
         output_file.sync_all()?;
         drop(output_file);
 
         std::fs::rename(temp_path, out_path)?;
     }
-
-    std::fs::rename(temp_dir_path, dir_path)?;
 
     Ok(())
 }
