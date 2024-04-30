@@ -428,6 +428,40 @@ where
     Ok(())
 }
 
+fn extract_map_infos<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let dir_path = dir_path.as_ref();
+
+    std::fs::create_dir_all(dir_path)?;
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let map: BTreeMap<i32, MapInfo> = ctx.from_value(arena.root())?;
+
+    for (index, value) in map.iter() {
+        let name = value.name.as_str();
+
+        println!("  extracting map info \"{name}\"");
+
+        let out_path = dir_path.join(format!("{index}-{name}.json"));
+        let temp_path = nd_util::with_push_extension(&out_path, "temp");
+
+        // TODO: Lock?
+        // TODO: Drop delete guard for file?
+        let mut output_file = File::create_new(&temp_path)?;
+        serde_json::to_writer_pretty(&mut output_file, value)?;
+        output_file.flush()?;
+        output_file.sync_all()?;
+        drop(output_file);
+
+        std::fs::rename(temp_path, out_path)?;
+    }
+
+    Ok(())
+}
+
 fn extract_system<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
 where
     P: AsRef<Path>,
@@ -467,40 +501,6 @@ where
     std::fs::write(&temp_path, map)?;
 
     std::fs::rename(temp_path, path)?;
-
-    Ok(())
-}
-
-fn extract_map_infos<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
-where
-    P: AsRef<Path>,
-{
-    let dir_path = dir_path.as_ref();
-
-    std::fs::create_dir_all(dir_path)?;
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let map: BTreeMap<i32, MapInfo> = ctx.from_value(arena.root())?;
-
-    for (index, value) in map.iter() {
-        let name = value.name.as_str();
-
-        println!("  extracting map info \"{name}\"");
-
-        let out_path = dir_path.join(format!("{index}-{name}.json"));
-        let temp_path = nd_util::with_push_extension(&out_path, "temp");
-
-        // TODO: Lock?
-        // TODO: Drop delete guard for file?
-        let mut output_file = File::create_new(&temp_path)?;
-        serde_json::to_writer_pretty(&mut output_file, value)?;
-        output_file.flush()?;
-        output_file.sync_all()?;
-        drop(output_file);
-
-        std::fs::rename(temp_path, out_path)?;
-    }
 
     Ok(())
 }
