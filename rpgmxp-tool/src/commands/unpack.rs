@@ -5,7 +5,9 @@ use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
 use camino::Utf8Path;
+use rpgmxp_types::Actor;
 use rpgmxp_types::Armor;
+use rpgmxp_types::CommonEvent;
 use rpgmxp_types::Enemy;
 use rpgmxp_types::Item;
 use rpgmxp_types::Map;
@@ -166,31 +168,31 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
                 extract_scripts(entry, output_path)?;
             }
             ["Data", "CommonEvents.rxdata"] if !options.skip_extract_common_events => {
-                extract_common_events(entry, output_path)?;
-            }
-            ["Data", "System.rxdata"] if !options.skip_extract_system => {
-                extract_system(entry, output_path)?;
+                extract_arraylike::<CommonEvent>(entry, output_path)?;
             }
             ["Data", "Actors.rxdata"] if !options.skip_extract_actors => {
-                extract_actors(entry, output_path)?;
+                extract_arraylike::<Actor>(entry, output_path)?;
             }
             ["Data", "Weapons.rxdata"] if !options.skip_extract_weapons => {
-                extract_weapons(entry, output_path)?;
+                extract_arraylike::<Weapon>(entry, output_path)?;
             }
             ["Data", "Armors.rxdata"] if !options.skip_extract_armors => {
-                extract_armors(entry, output_path)?;
+                extract_arraylike::<Armor>(entry, output_path)?;
             }
             ["Data", "Skills.rxdata"] if !options.skip_extract_skills => {
-                extract_skills(entry, output_path)?;
+                extract_arraylike::<Skill>(entry, output_path)?;
             }
             ["Data", "States.rxdata"] if !options.skip_extract_states => {
-                extract_states(entry, output_path)?;
+                extract_arraylike::<State>(entry, output_path)?;
             }
             ["Data", "Items.rxdata"] if !options.skip_extract_items => {
-                extract_items(entry, output_path)?;
+                extract_arraylike::<Item>(entry, output_path)?;
             }
             ["Data", "Enemies.rxdata"] if !options.skip_extract_enemies => {
                 extract_arraylike::<Enemy>(entry, output_path)?;
+            }
+            ["Data", "System.rxdata"] if !options.skip_extract_system => {
+                extract_system(entry, output_path)?;
             }
             ["Data", file]
                 if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
@@ -281,48 +283,134 @@ where
     Ok(())
 }
 
-fn extract_common_events<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
+trait ArrayLikeElement<'a>: serde::Serialize + ruby_marshal::FromValue<'a> {
+    /// Get the display name of this type
+    fn type_display_name() -> &'static str;
+
+    /// Get the name of this element.
+    fn name(&self) -> &str;
+}
+
+impl ArrayLikeElement<'_> for CommonEvent {
+    fn type_display_name() -> &'static str {
+        "common event"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Actor {
+    fn type_display_name() -> &'static str {
+        "actor"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Weapon {
+    fn type_display_name() -> &'static str {
+        "weapon"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Armor {
+    fn type_display_name() -> &'static str {
+        "armor"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Skill {
+    fn type_display_name() -> &'static str {
+        "skill"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for State {
+    fn type_display_name() -> &'static str {
+        "state"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Item {
+    fn type_display_name() -> &'static str {
+        "item"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Enemy {
+    fn type_display_name() -> &'static str {
+        "enemy"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+fn extract_arraylike<T>(file: impl std::io::Read, dir_path: impl AsRef<Path>) -> anyhow::Result<()>
 where
-    P: AsRef<Path>,
+    T: for<'a> ArrayLikeElement<'a>,
 {
     let dir_path = dir_path.as_ref();
-    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
+    let type_display_name = T::type_display_name();
 
-    // TODO: Lock?
-    // TODO: Drop delete guard for file?
-    std::fs::create_dir_all(&temp_dir_path)?;
+    std::fs::create_dir_all(dir_path)?;
 
     let arena = ruby_marshal::load(file)?;
     let ctx = FromValueContext::new(&arena);
-    let common_events: Vec<Option<rpgmxp_types::CommonEvent>> = ctx.from_value(arena.root())?;
+    let array: Vec<Option<T>> = ctx.from_value(arena.root())?;
 
-    for (common_event_index, common_event) in common_events.iter().enumerate() {
-        if common_event_index == 0 {
-            ensure!(common_event.is_none(), "common event 0 should be nil");
+    for (index, value) in array.iter().enumerate() {
+        if index == 0 {
+            ensure!(value.is_none(), "{type_display_name} 0 should be nil");
 
             continue;
         }
 
-        let common_event = common_event.as_ref().context("common event is nil")?;
+        let value = value
+            .as_ref()
+            .with_context(|| format!("{type_display_name} is nil"))?;
 
-        println!("  extracting common event \"{}\"", common_event.name);
+        println!("  extracting {} \"{}\"", type_display_name, value.name());
 
-        let common_event_name = common_event.name.as_str();
-        let out_path = temp_dir_path.join(format!("{common_event_index}-{common_event_name}.json"));
+        let name = value.name();
+        let out_path = dir_path.join(format!("{index}-{name}.json"));
         let temp_path = nd_util::with_push_extension(&out_path, "temp");
 
         // TODO: Lock?
         // TODO: Drop delete guard for file?
         let mut output_file = File::create_new(&temp_path)?;
-        serde_json::to_writer_pretty(&mut output_file, common_event)?;
+        serde_json::to_writer_pretty(&mut output_file, value)?;
         output_file.flush()?;
         output_file.sync_all()?;
         drop(output_file);
 
         std::fs::rename(temp_path, out_path)?;
     }
-
-    std::fs::rename(temp_dir_path, dir_path)?;
 
     Ok(())
 }
@@ -344,346 +432,6 @@ where
     file.flush()?;
     file.sync_all()?;
     std::fs::rename(temp_path, path)?;
-
-    Ok(())
-}
-
-fn extract_actors<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
-where
-    P: AsRef<Path>,
-{
-    let dir_path = dir_path.as_ref();
-    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
-
-    // TODO: Lock?
-    // TODO: Drop delete guard for file?
-    std::fs::create_dir_all(&temp_dir_path)?;
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let actors: Vec<Option<rpgmxp_types::Actor>> = ctx.from_value(arena.root())?;
-
-    for (actor_index, actor) in actors.iter().enumerate() {
-        if actor_index == 0 {
-            ensure!(actor.is_none(), "actor 0 should be nil");
-
-            continue;
-        }
-
-        let actor = actor.as_ref().context("actor is nil")?;
-
-        println!("  extracting actor \"{}\"", actor.name);
-
-        let actor_name = actor.name.as_str();
-        let out_path = temp_dir_path.join(format!("{actor_index}-{actor_name}.json"));
-        let temp_path = nd_util::with_push_extension(&out_path, "temp");
-
-        // TODO: Lock?
-        // TODO: Drop delete guard for file?
-        let mut output_file = File::create_new(&temp_path)?;
-        serde_json::to_writer_pretty(&mut output_file, actor)?;
-        output_file.flush()?;
-        output_file.sync_all()?;
-        drop(output_file);
-
-        std::fs::rename(temp_path, out_path)?;
-    }
-
-    std::fs::rename(temp_dir_path, dir_path)?;
-
-    Ok(())
-}
-
-fn extract_weapons<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
-where
-    P: AsRef<Path>,
-{
-    let dir_path = dir_path.as_ref();
-    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
-
-    // TODO: Lock?
-    // TODO: Drop delete guard for file?
-    std::fs::create_dir_all(&temp_dir_path)?;
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let weapons: Vec<Option<Weapon>> = ctx.from_value(arena.root())?;
-
-    for (weapon_index, weapon) in weapons.iter().enumerate() {
-        if weapon_index == 0 {
-            ensure!(weapon.is_none(), "weapon 0 should be nil");
-
-            continue;
-        }
-
-        let weapon = weapon.as_ref().context("weapon is nil")?;
-
-        println!("  extracting weapon \"{}\"", weapon.name);
-
-        let weapon_name = weapon.name.as_str();
-        let out_path = temp_dir_path.join(format!("{weapon_index}-{weapon_name}.json"));
-        let temp_path = nd_util::with_push_extension(&out_path, "temp");
-
-        // TODO: Lock?
-        // TODO: Drop delete guard for file?
-        let mut output_file = File::create_new(&temp_path)?;
-        serde_json::to_writer_pretty(&mut output_file, weapon)?;
-        output_file.flush()?;
-        output_file.sync_all()?;
-        drop(output_file);
-
-        std::fs::rename(temp_path, out_path)?;
-    }
-
-    std::fs::rename(temp_dir_path, dir_path)?;
-
-    Ok(())
-}
-
-fn extract_armors<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
-where
-    P: AsRef<Path>,
-{
-    let dir_path = dir_path.as_ref();
-    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
-
-    // TODO: Lock?
-    // TODO: Drop delete guard for file?
-    std::fs::create_dir_all(&temp_dir_path)?;
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let armors: Vec<Option<Armor>> = ctx.from_value(arena.root())?;
-
-    for (armor_index, armor) in armors.iter().enumerate() {
-        if armor_index == 0 {
-            ensure!(armor.is_none(), "armor 0 should be nil");
-
-            continue;
-        }
-
-        let armor = armor.as_ref().context("armor is nil")?;
-
-        println!("  extracting armor \"{}\"", armor.name);
-
-        let armor_name = armor.name.as_str();
-        let out_path = temp_dir_path.join(format!("{armor_index}-{armor_name}.json"));
-        let temp_path = nd_util::with_push_extension(&out_path, "temp");
-
-        // TODO: Lock?
-        // TODO: Drop delete guard for file?
-        let mut output_file = File::create_new(&temp_path)?;
-        serde_json::to_writer_pretty(&mut output_file, armor)?;
-        output_file.flush()?;
-        output_file.sync_all()?;
-        drop(output_file);
-
-        std::fs::rename(temp_path, out_path)?;
-    }
-
-    std::fs::rename(temp_dir_path, dir_path)?;
-
-    Ok(())
-}
-
-fn extract_skills<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
-where
-    P: AsRef<Path>,
-{
-    let dir_path = dir_path.as_ref();
-    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
-
-    // TODO: Lock?
-    // TODO: Drop delete guard for file?
-    std::fs::create_dir_all(&temp_dir_path)?;
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let skills: Vec<Option<Skill>> = ctx.from_value(arena.root())?;
-
-    for (index, skill) in skills.iter().enumerate() {
-        if index == 0 {
-            ensure!(skill.is_none(), "skill 0 should be nil");
-
-            continue;
-        }
-
-        let skill = skill.as_ref().context("skill is nil")?;
-
-        println!("  extracting skill \"{}\"", skill.name);
-
-        let name = skill.name.as_str();
-        let out_path = temp_dir_path.join(format!("{index}-{name}.json"));
-        let temp_path = nd_util::with_push_extension(&out_path, "temp");
-
-        // TODO: Lock?
-        // TODO: Drop delete guard for file?
-        let mut output_file = File::create_new(&temp_path)?;
-        serde_json::to_writer_pretty(&mut output_file, skill)?;
-        output_file.flush()?;
-        output_file.sync_all()?;
-        drop(output_file);
-
-        std::fs::rename(temp_path, out_path)?;
-    }
-
-    std::fs::rename(temp_dir_path, dir_path)?;
-
-    Ok(())
-}
-
-fn extract_states<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
-where
-    P: AsRef<Path>,
-{
-    let dir_path = dir_path.as_ref();
-    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
-
-    // TODO: Lock?
-    // TODO: Drop delete guard for file?
-    std::fs::create_dir_all(&temp_dir_path)?;
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let states: Vec<Option<State>> = ctx.from_value(arena.root())?;
-
-    for (index, state) in states.iter().enumerate() {
-        if index == 0 {
-            ensure!(state.is_none(), "state 0 should be nil");
-
-            continue;
-        }
-
-        let state = state.as_ref().context("state is nil")?;
-
-        println!("  extracting state \"{}\"", state.name);
-
-        let name = state.name.as_str();
-        let out_path = temp_dir_path.join(format!("{index}-{name}.json"));
-        let temp_path = nd_util::with_push_extension(&out_path, "temp");
-
-        // TODO: Lock?
-        // TODO: Drop delete guard for file?
-        let mut output_file = File::create_new(&temp_path)?;
-        serde_json::to_writer_pretty(&mut output_file, state)?;
-        output_file.flush()?;
-        output_file.sync_all()?;
-        drop(output_file);
-
-        std::fs::rename(temp_path, out_path)?;
-    }
-
-    std::fs::rename(temp_dir_path, dir_path)?;
-
-    Ok(())
-}
-
-fn extract_items<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
-where
-    P: AsRef<Path>,
-{
-    let dir_path = dir_path.as_ref();
-    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
-
-    // TODO: Lock?
-    // TODO: Drop delete guard for file?
-    std::fs::create_dir_all(&temp_dir_path)?;
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let items: Vec<Option<Item>> = ctx.from_value(arena.root())?;
-
-    for (index, item) in items.iter().enumerate() {
-        if index == 0 {
-            ensure!(item.is_none(), "item 0 should be nil");
-
-            continue;
-        }
-
-        let item = item.as_ref().context("item is nil")?;
-
-        println!("  extracting item \"{}\"", item.name);
-
-        let name = item.name.as_str();
-        let out_path = temp_dir_path.join(format!("{index}-{name}.json"));
-        let temp_path = nd_util::with_push_extension(&out_path, "temp");
-
-        // TODO: Lock?
-        // TODO: Drop delete guard for file?
-        let mut output_file = File::create_new(&temp_path)?;
-        serde_json::to_writer_pretty(&mut output_file, item)?;
-        output_file.flush()?;
-        output_file.sync_all()?;
-        drop(output_file);
-
-        std::fs::rename(temp_path, out_path)?;
-    }
-
-    std::fs::rename(temp_dir_path, dir_path)?;
-
-    Ok(())
-}
-
-trait ArrayLikeElement<'a>: serde::Serialize + ruby_marshal::FromValue<'a> {
-    /// Get the display name of this type
-    fn type_display_name() -> &'static str;
-
-    /// Get the name of this element.
-    fn name(&self) -> &str;
-}
-
-impl ArrayLikeElement<'_> for Enemy {
-    fn type_display_name() -> &'static str {
-        "enemy"
-    }
-
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-}
-
-fn extract_arraylike<T>(file: impl std::io::Read, dir_path: impl AsRef<Path>) -> anyhow::Result<()>
-where
-    T: for<'a> ArrayLikeElement<'a>,
-{
-    let dir_path = dir_path.as_ref();
-    let type_display_name = T::type_display_name();
-    
-    std::fs::create_dir_all(&dir_path)?;
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let array: Vec<Option<T>> = ctx.from_value(arena.root())?;
-
-    for (index, value) in array.iter().enumerate() {
-        if index == 0 {
-            ensure!(value.is_none(), "{type_display_name} 0 should be nil");
-
-            continue;
-        }
-
-        let value = value.as_ref().with_context(|| format!("{type_display_name} is nil"))?;
-
-        println!(
-            "  extracting {} \"{}\"",
-            type_display_name,
-            value.name()
-        );
-
-        let name = value.name();
-        let out_path = dir_path.join(format!("{index}-{name}.json"));
-        let temp_path = nd_util::with_push_extension(&out_path, "temp");
-
-        // TODO: Lock?
-        // TODO: Drop delete guard for file?
-        let mut output_file = File::create_new(&temp_path)?;
-        serde_json::to_writer_pretty(&mut output_file, value)?;
-        output_file.flush()?;
-        output_file.sync_all()?;
-        drop(output_file);
-
-        std::fs::rename(temp_path, out_path)?;
-    }
 
     Ok(())
 }
