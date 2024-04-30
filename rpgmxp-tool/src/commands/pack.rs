@@ -9,6 +9,7 @@ use rpgmxp_types::Armor;
 use rpgmxp_types::CommonEvent;
 use rpgmxp_types::Enemy;
 use rpgmxp_types::Item;
+use rpgmxp_types::MapInfo;
 use rpgmxp_types::Script;
 use rpgmxp_types::ScriptList;
 use rpgmxp_types::Skill;
@@ -212,6 +213,17 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "Enemies.rxdata", ..] => {
                 // Ignore entries, we explore them in the above branch.
             }
+            ["Data", "MapInfos.rxdata"] if entry_file_type.is_dir() => {
+                println!("packing \"{}\"", relative_path.display());
+
+                let rx_data = generate_map_infos_rx_data(entry_path)?;
+                let size = u32::try_from(rx_data.len())?;
+
+                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
+            }
+            ["Data", "MapInfos.rxdata", ..] => {
+                // Ignore entries, we explore them in the above branch.
+            }
             ["Data", "System.json"] if entry_file_type.is_file() => {
                 println!("packing \"{}\"", relative_path.display());
 
@@ -377,6 +389,49 @@ where
 
     let mut arena = ruby_marshal::ValueArena::new();
     let handle = data.into_value(&mut arena)?;
+    arena.replace_root(handle);
+
+    let mut data = Vec::new();
+    ruby_marshal::dump(&mut data, &arena)?;
+
+    Ok(data)
+}
+
+fn generate_map_infos_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
+    let mut map: BTreeMap<i32, MapInfo> = BTreeMap::new();
+
+    for dir_entry in path.read_dir()? {
+        let dir_entry = dir_entry?;
+        let dir_entry_file_type = dir_entry.file_type()?;
+
+        ensure!(dir_entry_file_type.is_file());
+
+        let dir_entry_file_name = dir_entry.file_name();
+        let dir_entry_file_name = dir_entry_file_name.to_str().context("non-unicode name")?;
+        let dir_entry_file_stem = dir_entry_file_name
+            .strip_suffix(".json")
+            .context("not a \"json\" file")?;
+
+        let (index, name) = dir_entry_file_stem
+            .split_once('-')
+            .context("invalid name format")?;
+        let index: i32 = index.parse()?;
+
+        println!("  packing map info \"{name}\"");
+
+        let dir_entry_path = dir_entry.path();
+        let json = std::fs::read_to_string(dir_entry_path)?;
+
+        let value: MapInfo = serde_json::from_str(&json)?;
+
+        let old_entry = map.insert(index, value);
+        if old_entry.is_some() {
+            bail!("duplicate map info for index {index}");
+        }
+    }
+
+    let mut arena = ruby_marshal::ValueArena::new();
+    let handle = map.into_value(&mut arena)?;
     arena.replace_root(handle);
 
     let mut data = Vec::new();

@@ -11,11 +11,13 @@ use rpgmxp_types::CommonEvent;
 use rpgmxp_types::Enemy;
 use rpgmxp_types::Item;
 use rpgmxp_types::Map;
+use rpgmxp_types::MapInfo;
 use rpgmxp_types::ScriptList;
 use rpgmxp_types::Skill;
 use rpgmxp_types::State;
 use rpgmxp_types::Weapon;
 use ruby_marshal::FromValueContext;
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -106,12 +108,20 @@ pub struct Options {
         description = "whether items should not be extracted"
     )]
     pub skip_extract_items: bool,
+
     #[argh(
         switch,
         long = "skip-extract-enemies",
         description = "whether enemies should not be extracted"
     )]
     pub skip_extract_enemies: bool,
+
+    #[argh(
+        switch,
+        long = "skip-extract-map-infos",
+        description = "whether map info should not be extracted"
+    )]
+    pub skip_extract_map_infos: bool,
 
     #[argh(
         switch,
@@ -190,6 +200,9 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             }
             ["Data", "Enemies.rxdata"] if !options.skip_extract_enemies => {
                 extract_arraylike::<Enemy>(entry, output_path)?;
+            }
+            ["Data", "MapInfos.rxdata"] if !options.skip_extract_map_infos => {
+                extract_map_infos(entry, output_path)?;
             }
             ["Data", "System.rxdata"] if !options.skip_extract_system => {
                 extract_system(entry, output_path)?;
@@ -398,6 +411,40 @@ where
         println!("  extracting {} \"{}\"", type_display_name, value.name());
 
         let name = value.name();
+        let out_path = dir_path.join(format!("{index}-{name}.json"));
+        let temp_path = nd_util::with_push_extension(&out_path, "temp");
+
+        // TODO: Lock?
+        // TODO: Drop delete guard for file?
+        let mut output_file = File::create_new(&temp_path)?;
+        serde_json::to_writer_pretty(&mut output_file, value)?;
+        output_file.flush()?;
+        output_file.sync_all()?;
+        drop(output_file);
+
+        std::fs::rename(temp_path, out_path)?;
+    }
+
+    Ok(())
+}
+
+fn extract_map_infos<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let dir_path = dir_path.as_ref();
+
+    std::fs::create_dir_all(dir_path)?;
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let map: BTreeMap<i32, MapInfo> = ctx.from_value(arena.root())?;
+
+    for (index, value) in map.iter() {
+        let name = value.name.as_str();
+
+        println!("  extracting map info \"{name}\"");
+
         let out_path = dir_path.join(format!("{index}-{name}.json"));
         let temp_path = nd_util::with_push_extension(&out_path, "temp");
 
