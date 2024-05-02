@@ -28,7 +28,15 @@ pub mod table;
 pub mod tone;
 pub(crate) mod util;
 pub mod weapon;
+pub mod troop;
+pub mod troop_page;
+pub mod troop_page_condition;
+pub mod troop_member;
 
+pub use self::troop_member::TroopMember;
+pub use self::troop_page_condition::TroopPageCondition;
+pub use self::troop_page::TroopPage;
+pub use self::troop::Troop;
 pub use self::actor::Actor;
 pub use self::armor::Armor;
 pub use self::audio_file::AudioFile;
