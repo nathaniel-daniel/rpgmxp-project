@@ -1,5 +1,5 @@
-use crate::TroopPage;
 use crate::TroopMember;
+use crate::TroopPage;
 
 #[derive(
     Debug,
