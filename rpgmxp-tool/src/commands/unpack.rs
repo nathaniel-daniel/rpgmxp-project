@@ -1,6 +1,7 @@
 mod file_entry_iter;
 
 use self::file_entry_iter::FileEntryIter;
+use crate::util::ArrayLikeElement;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
@@ -316,114 +317,6 @@ where
     std::fs::rename(temp_dir_path, dir_path)?;
 
     Ok(())
-}
-
-trait ArrayLikeElement<'a>: serde::Serialize + ruby_marshal::FromValue<'a> {
-    /// Get the display name of this type
-    fn type_display_name() -> &'static str;
-
-    /// Get the name of this element.
-    fn name(&self) -> &str;
-}
-
-impl ArrayLikeElement<'_> for CommonEvent {
-    fn type_display_name() -> &'static str {
-        "common event"
-    }
-
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-}
-
-impl ArrayLikeElement<'_> for Actor {
-    fn type_display_name() -> &'static str {
-        "actor"
-    }
-
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-}
-
-impl ArrayLikeElement<'_> for Weapon {
-    fn type_display_name() -> &'static str {
-        "weapon"
-    }
-
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-}
-
-impl ArrayLikeElement<'_> for Armor {
-    fn type_display_name() -> &'static str {
-        "armor"
-    }
-
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-}
-
-impl ArrayLikeElement<'_> for Skill {
-    fn type_display_name() -> &'static str {
-        "skill"
-    }
-
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-}
-
-impl ArrayLikeElement<'_> for State {
-    fn type_display_name() -> &'static str {
-        "state"
-    }
-
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-}
-
-impl ArrayLikeElement<'_> for Item {
-    fn type_display_name() -> &'static str {
-        "item"
-    }
-
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-}
-
-impl ArrayLikeElement<'_> for Enemy {
-    fn type_display_name() -> &'static str {
-        "enemy"
-    }
-
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-}
-
-impl ArrayLikeElement<'_> for Class {
-    fn type_display_name() -> &'static str {
-        "class"
-    }
-
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
-}
-
-impl ArrayLikeElement<'_> for Troop {
-    fn type_display_name() -> &'static str {
-        "troop"
-    }
-
-    fn name(&self) -> &str {
-        self.name.as_str()
-    }
 }
 
 fn extract_arraylike<T>(file: impl std::io::Read, dir_path: impl AsRef<Path>) -> anyhow::Result<()>

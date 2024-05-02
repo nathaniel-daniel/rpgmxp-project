@@ -1,6 +1,7 @@
 mod file_sink;
 
 use self::file_sink::FileSink;
+use crate::util::ArrayLikeElement;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
@@ -129,8 +130,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "CommonEvents.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let rx_data =
-                    generate_arraylike_rx_data::<CommonEvent>(entry_path, "common event")?;
+                let rx_data = generate_arraylike_rx_data::<CommonEvent>(entry_path)?;
                 let size = u32::try_from(rx_data.len())?;
 
                 file_sink.write_file(&relative_path_components, size, &*rx_data)?;
@@ -141,7 +141,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "Actors.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let rx_data = generate_arraylike_rx_data::<Actor>(entry_path, "actor")?;
+                let rx_data = generate_arraylike_rx_data::<Actor>(entry_path)?;
                 let size = u32::try_from(rx_data.len())?;
 
                 file_sink.write_file(&relative_path_components, size, &*rx_data)?;
@@ -152,7 +152,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "Weapons.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let rx_data = generate_arraylike_rx_data::<Weapon>(entry_path, "weapon")?;
+                let rx_data = generate_arraylike_rx_data::<Weapon>(entry_path)?;
                 let size = u32::try_from(rx_data.len())?;
 
                 file_sink.write_file(&relative_path_components, size, &*rx_data)?;
@@ -163,7 +163,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "Armors.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let rx_data = generate_arraylike_rx_data::<Armor>(entry_path, "armor")?;
+                let rx_data = generate_arraylike_rx_data::<Armor>(entry_path)?;
                 let size = u32::try_from(rx_data.len())?;
 
                 file_sink.write_file(&relative_path_components, size, &*rx_data)?;
@@ -174,7 +174,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "Skills.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let rx_data = generate_arraylike_rx_data::<Skill>(entry_path, "skill")?;
+                let rx_data = generate_arraylike_rx_data::<Skill>(entry_path)?;
                 let size = u32::try_from(rx_data.len())?;
 
                 file_sink.write_file(&relative_path_components, size, &*rx_data)?;
@@ -185,7 +185,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "States.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let rx_data = generate_arraylike_rx_data::<State>(entry_path, "state")?;
+                let rx_data = generate_arraylike_rx_data::<State>(entry_path)?;
                 let size = u32::try_from(rx_data.len())?;
 
                 file_sink.write_file(&relative_path_components, size, &*rx_data)?;
@@ -196,7 +196,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "Items.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let rx_data = generate_arraylike_rx_data::<Item>(entry_path, "item")?;
+                let rx_data = generate_arraylike_rx_data::<Item>(entry_path)?;
                 let size = u32::try_from(rx_data.len())?;
 
                 file_sink.write_file(&relative_path_components, size, &*rx_data)?;
@@ -207,7 +207,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "Enemies.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let rx_data = generate_arraylike_rx_data::<Enemy>(entry_path, "enemy")?;
+                let rx_data = generate_arraylike_rx_data::<Enemy>(entry_path)?;
                 let size = u32::try_from(rx_data.len())?;
 
                 file_sink.write_file(&relative_path_components, size, &*rx_data)?;
@@ -218,7 +218,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "Classes.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let rx_data = generate_arraylike_rx_data::<Class>(entry_path, "class")?;
+                let rx_data = generate_arraylike_rx_data::<Class>(entry_path)?;
                 let size = u32::try_from(rx_data.len())?;
 
                 file_sink.write_file(&relative_path_components, size, &*rx_data)?;
@@ -229,7 +229,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "Troops.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
-                let rx_data = generate_arraylike_rx_data::<Troop>(entry_path, "troop")?;
+                let rx_data = generate_arraylike_rx_data::<Troop>(entry_path)?;
                 let size = u32::try_from(rx_data.len())?;
 
                 file_sink.write_file(&relative_path_components, size, &*rx_data)?;
@@ -360,13 +360,13 @@ fn generate_scripts_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
     Ok(data)
 }
 
-fn generate_arraylike_rx_data<T>(path: &Path, type_name: &str) -> anyhow::Result<Vec<u8>>
+fn generate_arraylike_rx_data<T>(path: &Path) -> anyhow::Result<Vec<u8>>
 where
-    T: serde::de::DeserializeOwned + ruby_marshal::IntoValue,
+    T: for<'a> ArrayLikeElement<'a>,
 {
     fn load_json_str(
         dir_entry: std::io::Result<std::fs::DirEntry>,
-        type_name: &str,
+        type_display_name: &str,
     ) -> anyhow::Result<(usize, String)> {
         let dir_entry = dir_entry?;
         let dir_entry_file_type = dir_entry.file_type()?;
@@ -385,7 +385,7 @@ where
         let name = crate::util::percent_unescape_file_name(name)?;
         let index: usize = index.parse()?;
 
-        println!("  packing {type_name} \"{name}\"");
+        println!("  packing {type_display_name} \"{name}\"");
 
         let dir_entry_path = dir_entry.path();
         let json = std::fs::read_to_string(dir_entry_path)?;
@@ -393,15 +393,16 @@ where
         Ok((index, json))
     }
 
+    let type_display_name = T::type_display_name();
     let mut map: BTreeMap<usize, T> = BTreeMap::new();
 
     for dir_entry in path.read_dir()? {
-        let (index, json) = load_json_str(dir_entry, type_name)?;
+        let (index, json) = load_json_str(dir_entry, type_display_name)?;
         let value: T = serde_json::from_str(&json)?;
 
         let old_entry = map.insert(index, value);
         if old_entry.is_some() {
-            bail!("duplicate {type_name} for index {index}");
+            bail!("duplicate {type_display_name} for index {index}");
         }
     }
 
