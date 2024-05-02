@@ -112,7 +112,9 @@ pub fn percent_unescape_file_name(file_name: &str) -> anyhow::Result<String> {
 }
 
 /// A trait to represent objects stored in *.rxdata files as elements of an array.
-pub trait ArrayLikeElement<'a>: serde::Serialize + ruby_marshal::FromValue<'a> {
+pub trait ArrayLikeElement<'a>:
+    serde::Deserialize<'a> + serde::Serialize + ruby_marshal::FromValue<'a> + ruby_marshal::IntoValue
+{
     /// Get the display name of this type
     fn type_display_name() -> &'static str;
 
