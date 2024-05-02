@@ -8,6 +8,7 @@ use rpgmxp_types::Enemy;
 use rpgmxp_types::Item;
 use rpgmxp_types::Skill;
 use rpgmxp_types::State;
+use rpgmxp_types::Tileset;
 use rpgmxp_types::Troop;
 use rpgmxp_types::Weapon;
 use std::fmt::Write;
@@ -215,6 +216,16 @@ impl ArrayLikeElement<'_> for Class {
 impl ArrayLikeElement<'_> for Troop {
     fn type_display_name() -> &'static str {
         "troop"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Tileset {
+    fn type_display_name() -> &'static str {
+        "tileset"
     }
 
     fn name(&self) -> &str {
