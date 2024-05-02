@@ -6,6 +6,7 @@ use anyhow::ensure;
 use anyhow::Context;
 use rpgmxp_types::Actor;
 use rpgmxp_types::Armor;
+use rpgmxp_types::Class;
 use rpgmxp_types::CommonEvent;
 use rpgmxp_types::Enemy;
 use rpgmxp_types::Item;
@@ -211,6 +212,17 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
                 file_sink.write_file(&relative_path_components, size, &*rx_data)?;
             }
             ["Data", "Enemies.rxdata", ..] => {
+                // Ignore entries, we explore them in the above branch.
+            }
+            ["Data", "Classes.rxdata"] if entry_file_type.is_dir() => {
+                println!("packing \"{}\"", relative_path.display());
+
+                let rx_data = generate_arraylike_rx_data::<Class>(entry_path, "class")?;
+                let size = u32::try_from(rx_data.len())?;
+
+                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
+            }
+            ["Data", "Classes.rxdata", ..] => {
                 // Ignore entries, we explore them in the above branch.
             }
             ["Data", "MapInfos.rxdata"] if entry_file_type.is_dir() => {
