@@ -17,6 +17,7 @@ use rpgmxp_types::MapInfo;
 use rpgmxp_types::ScriptList;
 use rpgmxp_types::Skill;
 use rpgmxp_types::State;
+use rpgmxp_types::Tileset;
 use rpgmxp_types::Troop;
 use rpgmxp_types::Weapon;
 use ruby_marshal::FromValueContext;
@@ -135,8 +136,15 @@ pub struct Options {
 
     #[argh(
         switch,
+        long = "skip-extract-tilesets",
+        description = "whether tilesets should not be extracted"
+    )]
+    pub skip_extract_tilesets: bool,
+
+    #[argh(
+        switch,
         long = "skip-extract-map-infos",
-        description = "whether map info should not be extracted"
+        description = "whether map infos should not be extracted"
     )]
     pub skip_extract_map_infos: bool,
 
@@ -223,6 +231,9 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             }
             ["Data", "Troops.rxdata"] if !options.skip_extract_troops => {
                 extract_arraylike::<Troop>(entry, output_path)?;
+            }
+            ["Data", "Tilesets.rxdata"] if !options.skip_extract_tilesets => {
+                extract_arraylike::<Tileset>(entry, output_path)?;
             }
             ["Data", "MapInfos.rxdata"] if !options.skip_extract_map_infos => {
                 extract_map_infos(entry, output_path)?;
