@@ -1,5 +1,15 @@
 use anyhow::bail;
 use anyhow::Context;
+use rpgmxp_types::Actor;
+use rpgmxp_types::Armor;
+use rpgmxp_types::Class;
+use rpgmxp_types::CommonEvent;
+use rpgmxp_types::Enemy;
+use rpgmxp_types::Item;
+use rpgmxp_types::Skill;
+use rpgmxp_types::State;
+use rpgmxp_types::Troop;
+use rpgmxp_types::Weapon;
 use std::fmt::Write;
 
 /// Convert a hex u8 char into a u8 value.
@@ -99,6 +109,115 @@ pub fn percent_unescape_file_name(file_name: &str) -> anyhow::Result<String> {
     }
 
     Ok(unescaped)
+}
+
+/// A trait to represent objects stored in *.rxdata files as elements of an array.
+pub trait ArrayLikeElement<'a>: serde::Serialize + ruby_marshal::FromValue<'a> {
+    /// Get the display name of this type
+    fn type_display_name() -> &'static str;
+
+    /// Get the name of this element.
+    fn name(&self) -> &str;
+}
+
+impl ArrayLikeElement<'_> for CommonEvent {
+    fn type_display_name() -> &'static str {
+        "common event"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Actor {
+    fn type_display_name() -> &'static str {
+        "actor"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Weapon {
+    fn type_display_name() -> &'static str {
+        "weapon"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Armor {
+    fn type_display_name() -> &'static str {
+        "armor"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Skill {
+    fn type_display_name() -> &'static str {
+        "skill"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for State {
+    fn type_display_name() -> &'static str {
+        "state"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Item {
+    fn type_display_name() -> &'static str {
+        "item"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Enemy {
+    fn type_display_name() -> &'static str {
+        "enemy"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Class {
+    fn type_display_name() -> &'static str {
+        "class"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Troop {
+    fn type_display_name() -> &'static str {
+        "troop"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
 }
 
 #[cfg(test)]
