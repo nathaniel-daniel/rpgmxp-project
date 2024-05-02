@@ -15,6 +15,7 @@ use rpgmxp_types::Script;
 use rpgmxp_types::ScriptList;
 use rpgmxp_types::Skill;
 use rpgmxp_types::State;
+use rpgmxp_types::Troop;
 use rpgmxp_types::Weapon;
 use ruby_marshal::IntoValue;
 use std::collections::BTreeMap;
@@ -225,6 +226,17 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             ["Data", "Classes.rxdata", ..] => {
                 // Ignore entries, we explore them in the above branch.
             }
+            ["Data", "Troops.rxdata"] if entry_file_type.is_dir() => {
+                println!("packing \"{}\"", relative_path.display());
+
+                let rx_data = generate_arraylike_rx_data::<Troop>(entry_path, "troop")?;
+                let size = u32::try_from(rx_data.len())?;
+
+                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
+            }
+            ["Data", "Troops.rxdata", ..] => {
+                // Ignore entries, we explore them in the above branch.
+            }
             ["Data", "MapInfos.rxdata"] if entry_file_type.is_dir() => {
                 println!("packing \"{}\"", relative_path.display());
 
@@ -370,6 +382,7 @@ where
         let (index, name) = dir_entry_file_stem
             .split_once('-')
             .context("invalid name format")?;
+        let name = crate::util::percent_unescape_file_name(name)?;
         let index: usize = index.parse()?;
 
         println!("  packing {type_name} \"{name}\"");
