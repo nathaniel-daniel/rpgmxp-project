@@ -16,6 +16,7 @@ use rpgmxp_types::MapInfo;
 use rpgmxp_types::ScriptList;
 use rpgmxp_types::Skill;
 use rpgmxp_types::State;
+use rpgmxp_types::Troop;
 use rpgmxp_types::Weapon;
 use ruby_marshal::FromValueContext;
 use std::collections::BTreeMap;
@@ -126,6 +127,13 @@ pub struct Options {
 
     #[argh(
         switch,
+        long = "skip-extract-troops",
+        description = "whether troops should not be extracted"
+    )]
+    pub skip_extract_troops: bool,
+
+    #[argh(
+        switch,
         long = "skip-extract-map-infos",
         description = "whether map info should not be extracted"
     )]
@@ -211,6 +219,9 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             }
             ["Data", "Classes.rxdata"] if !options.skip_extract_classes => {
                 extract_arraylike::<Class>(entry, output_path)?;
+            }
+            ["Data", "Troops.rxdata"] if !options.skip_extract_troops => {
+                extract_arraylike::<Troop>(entry, output_path)?;
             }
             ["Data", "MapInfos.rxdata"] if !options.skip_extract_map_infos => {
                 extract_map_infos(entry, output_path)?;
@@ -405,6 +416,16 @@ impl ArrayLikeElement<'_> for Class {
     }
 }
 
+impl ArrayLikeElement<'_> for Troop {
+    fn type_display_name() -> &'static str {
+        "troop"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
 fn extract_arraylike<T>(file: impl std::io::Read, dir_path: impl AsRef<Path>) -> anyhow::Result<()>
 where
     T: for<'a> ArrayLikeElement<'a>,
@@ -432,7 +453,9 @@ where
         println!("  extracting {} \"{}\"", type_display_name, value.name());
 
         let name = value.name();
-        let out_path = dir_path.join(format!("{index}-{name}.json"));
+        let file_name = format!("{index}-{name}.json");
+        let file_name = crate::util::percent_escape_file_name(file_name.as_str());
+        let out_path = dir_path.join(file_name);
         let temp_path = nd_util::with_push_extension(&out_path, "temp");
 
         // TODO: Lock?
