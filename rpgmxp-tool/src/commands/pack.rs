@@ -16,6 +16,7 @@ use rpgmxp_types::Script;
 use rpgmxp_types::ScriptList;
 use rpgmxp_types::Skill;
 use rpgmxp_types::State;
+use rpgmxp_types::Tileset;
 use rpgmxp_types::Troop;
 use rpgmxp_types::Weapon;
 use ruby_marshal::IntoValue;
@@ -235,6 +236,17 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
                 file_sink.write_file(&relative_path_components, size, &*rx_data)?;
             }
             ["Data", "Troops.rxdata", ..] => {
+                // Ignore entries, we explore them in the above branch.
+            }
+            ["Data", "Tilesets.rxdata"] if entry_file_type.is_dir() => {
+                println!("packing \"{}\"", relative_path.display());
+
+                let rx_data = generate_arraylike_rx_data::<Tileset>(entry_path)?;
+                let size = u32::try_from(rx_data.len())?;
+
+                file_sink.write_file(&relative_path_components, size, &*rx_data)?;
+            }
+            ["Data", "Tilesets.rxdata", ..] => {
                 // Ignore entries, we explore them in the above branch.
             }
             ["Data", "MapInfos.rxdata"] if entry_file_type.is_dir() => {
