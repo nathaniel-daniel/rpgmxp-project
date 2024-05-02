@@ -1,6 +1,8 @@
 pub mod actor;
 pub mod armor;
 pub mod audio_file;
+pub mod class;
+pub mod class_learning;
 pub mod color;
 pub mod common_event;
 pub mod enemy;
@@ -30,6 +32,8 @@ pub mod weapon;
 pub use self::actor::Actor;
 pub use self::armor::Armor;
 pub use self::audio_file::AudioFile;
+pub use self::class::Class;
+pub use self::class_learning::ClassLearning;
 pub use self::color::Color;
 pub use self::common_event::CommonEvent;
 pub use self::enemy::Enemy;

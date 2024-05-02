@@ -7,6 +7,7 @@ use anyhow::Context;
 use camino::Utf8Path;
 use rpgmxp_types::Actor;
 use rpgmxp_types::Armor;
+use rpgmxp_types::Class;
 use rpgmxp_types::CommonEvent;
 use rpgmxp_types::Enemy;
 use rpgmxp_types::Item;
@@ -118,6 +119,13 @@ pub struct Options {
 
     #[argh(
         switch,
+        long = "skip-extract-classes",
+        description = "whether classes should not be extracted"
+    )]
+    pub skip_extract_classes: bool,
+
+    #[argh(
+        switch,
         long = "skip-extract-map-infos",
         description = "whether map info should not be extracted"
     )]
@@ -200,6 +208,9 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             }
             ["Data", "Enemies.rxdata"] if !options.skip_extract_enemies => {
                 extract_arraylike::<Enemy>(entry, output_path)?;
+            }
+            ["Data", "Classes.rxdata"] if !options.skip_extract_classes => {
+                extract_arraylike::<Class>(entry, output_path)?;
             }
             ["Data", "MapInfos.rxdata"] if !options.skip_extract_map_infos => {
                 extract_map_infos(entry, output_path)?;
@@ -377,6 +388,16 @@ impl ArrayLikeElement<'_> for Item {
 impl ArrayLikeElement<'_> for Enemy {
     fn type_display_name() -> &'static str {
         "enemy"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Class {
+    fn type_display_name() -> &'static str {
+        "class"
     }
 
     fn name(&self) -> &str {
