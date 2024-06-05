@@ -182,7 +182,7 @@ dependencies = [
 [[package]]
 name = "ruby-marshal"
 version = "0.0.0"
-source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs#5c435951de32b1625b65cfaa88adf64ec3ebd8ed"
+source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs#fdbaa0e592a378d728f2241a71c99e4772d69eaf"
 dependencies = [
  "indexmap",
  "slotmap",
@@ -191,7 +191,7 @@ dependencies = [
 [[package]]
 name = "ruby-marshal-derive"
 version = "0.0.0"
-source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs#5c435951de32b1625b65cfaa88adf64ec3ebd8ed"
+source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs#fdbaa0e592a378d728f2241a71c99e4772d69eaf"
 dependencies = [
  "proc-macro2",
  "quote",
