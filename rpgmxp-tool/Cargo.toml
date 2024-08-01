@@ -12,6 +12,6 @@ nd-util = { git = "https://github.com/nathaniel-daniel/nd-util-rs", version = "0
 rgssad = { git = "https://github.com/nathaniel-daniel/rgssad-rs", version = "0.0.0" }
 rpgmxp-types = { version = "0.0.0", path = "../rpgmxp-types" }
 ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs", version = "0.0.0" }
-serde = "1.0.203"
+serde = "1.0.204"
 serde_json = "1.0.120"
 walkdir = "2.4.0"
