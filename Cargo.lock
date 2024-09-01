@@ -116,7 +116,7 @@ dependencies = [
 [[package]]
 name = "nd-util"
 version = "0.0.0"
-source = "git+https://github.com/nathaniel-daniel/nd-util-rs#e32a7e167218e1dae40651f13e8e40cab56c26fb"
+source = "git+https://github.com/nathaniel-daniel/nd-util-rs#c1837d6e16b9cc3126bbd62003940944933f6022"
 
 [[package]]
 name = "proc-macro2"
