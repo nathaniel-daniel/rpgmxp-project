@@ -139,7 +139,7 @@ dependencies = [
 [[package]]
 name = "rgssad"
 version = "0.0.0"
-source = "git+https://github.com/nathaniel-daniel/rgssad-rs#3100d637b6f229fa2923cb5cdc1fa803b58dca08"
+source = "git+https://github.com/nathaniel-daniel/rgssad-rs#0177e3186eb58778a259e1d8908e4c19651135cf"
 
 [[package]]
 name = "rpgmxp-project"
