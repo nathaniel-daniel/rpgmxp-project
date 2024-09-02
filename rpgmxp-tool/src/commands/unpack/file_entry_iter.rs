@@ -108,7 +108,7 @@ impl FileEntryIter {
                 let file = File::open(entry.path())?;
 
                 let entry_path = entry.into_path();
-                let relative_path = entry_path.strip_prefix(&input_path)?;
+                let relative_path = entry_path.strip_prefix(input_path)?;
                 let relative_path = relative_path
                     .to_str()
                     .context("relative path is not utf8")?;
