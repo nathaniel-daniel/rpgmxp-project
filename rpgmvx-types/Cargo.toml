@@ -1,0 +1,10 @@
+[package]
+name = "rpgmvx-types"
+version = "0.0.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs" }
+ruby-marshal-derive = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs" }
+serde = { version = "1.0.209", features = [ "derive" ] }

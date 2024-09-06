@@ -14,7 +14,6 @@ use rpgmxp_types::Class;
 use rpgmxp_types::CommonEvent;
 use rpgmxp_types::Enemy;
 use rpgmxp_types::Item;
-use rpgmxp_types::Map;
 use rpgmxp_types::MapInfo;
 use rpgmxp_types::ScriptList;
 use rpgmxp_types::Skill;
@@ -266,7 +265,7 @@ fn extract_xp(
         ["Data", file]
             if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
         {
-            extract_map(entry, output_path)?;
+            extract_xp_map(entry, output_path)?;
         }
         _ => {
             let temp_path = nd_util::with_push_extension(&output_path, "temp");
@@ -290,6 +289,11 @@ fn extract_vx(
     output_path: PathBuf,
 ) -> anyhow::Result<()> {
     match relative_path_components.as_slice() {
+        ["Data", file]
+            if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rvdata") =>
+        {
+            extract_vx_map(entry, output_path)?;
+        }
         _ => {
             let temp_path = nd_util::with_push_extension(&output_path, "temp");
             // TODO: Lock?
@@ -472,10 +476,36 @@ where
     Ok(())
 }
 
-fn extract_map<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
+fn extract_xp_map<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
 where
     P: AsRef<Path>,
 {
+    use rpgmxp_types::Map;
+
+    let path = path.as_ref();
+    let path = path.with_extension("json");
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let map: Map = ctx.from_value(arena.root())?;
+    let map = serde_json::to_string_pretty(&map)?;
+
+    // TODO: Lock?
+    // TODO: Drop delete guard for file?
+    let temp_path = nd_util::with_push_extension(&path, "temp");
+    std::fs::write(&temp_path, map)?;
+
+    std::fs::rename(temp_path, path)?;
+
+    Ok(())
+}
+
+fn extract_vx_map<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    use rpgmvx_types::Map;
+
     let path = path.as_ref();
     let path = path.with_extension("json");
 

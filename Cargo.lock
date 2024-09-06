@@ -157,11 +157,21 @@ dependencies = [
  "memchr",
  "nd-util",
  "rgssad",
+ "rpgmvx-types",
  "rpgmxp-types",
  "ruby-marshal",
  "serde",
  "serde_json",
  "walkdir",
+]
+
+[[package]]
+name = "rpgmvx-types"
+version = "0.0.0"
+dependencies = [
+ "ruby-marshal",
+ "ruby-marshal-derive",
+ "serde",
 ]
 
 [[package]]
