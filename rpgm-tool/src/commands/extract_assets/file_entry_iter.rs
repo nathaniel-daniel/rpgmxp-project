@@ -8,7 +8,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use walkdir::WalkDir;
 
-/// A kending iter over
+/// A lending iter over files.
 pub enum FileEntryIter {
     WalkDir {
         input_path: PathBuf,

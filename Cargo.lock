@@ -148,19 +148,7 @@ version = "0.0.0"
 source = "git+https://github.com/nathaniel-daniel/rgssad-rs#f7e98db41f6b536e8dbc6049891a95432531ca35"
 
 [[package]]
-name = "rpgmxp-project"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "argh",
- "rpgmxp-types",
- "ruby-marshal",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "rpgmxp-tool"
+name = "rpgm-tool"
 version = "0.0.0"
 dependencies = [
  "anyhow",
@@ -173,6 +161,18 @@ dependencies = [
  "serde",
  "serde_json",
  "walkdir",
+]
+
+[[package]]
+name = "rpgmxp-project"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "argh",
+ "rpgmxp-types",
+ "ruby-marshal",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
