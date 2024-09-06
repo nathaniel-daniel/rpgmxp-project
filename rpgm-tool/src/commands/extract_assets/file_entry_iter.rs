@@ -1,3 +1,5 @@
+use crate::GameKind;
+use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
 use camino::Utf8Path;
@@ -13,9 +15,11 @@ pub enum FileEntryIter {
     WalkDir {
         input_path: PathBuf,
         iter: walkdir::IntoIter,
+        game_kind: GameKind,
     },
     Rgssad {
         reader: rgssad::Reader<File>,
+        game_kind: GameKind,
     },
 }
 
@@ -30,13 +34,26 @@ impl FileEntryIter {
         let path = path.as_ref();
 
         if !path.is_dir() {
+            // TODO: Add option to change rgssad version instead of assuming v1.
             return Self::new_rgssad_path(path);
         }
 
         let rgssad_path = path.join("Game.rgssad");
         match File::open(&rgssad_path) {
             Ok(file) => {
-                return Self::new_rgssad_file(file);
+                return Self::new_rgssad_file(file, GameKind::Xp);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => {
+                return Err(error)
+                    .with_context(|| format!("failed to open \"{}\"", rgssad_path.display()));
+            }
+        };
+
+        let rgssad_path = path.join("Game.rgss2a");
+        match File::open(&rgssad_path) {
+            Ok(file) => {
+                return Self::new_rgssad_file(file, GameKind::Vx);
             }
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
             Err(error) => {
@@ -63,11 +80,22 @@ impl FileEntryIter {
         P: AsRef<Path>,
     {
         let path = path.as_ref();
+
+        let game_kind = (|| {
+            let game_exe = std::fs::read(path.join("Game.exe"))?;
+            if memchr::memmem::find(&game_exe, b"R\x00G\x00S\x00S\x002\x00").is_some() {
+                return Ok(GameKind::Vx);
+            }
+
+            bail!("failed to determine game type");
+        })()?;
+
         let iter = WalkDir::new(path).into_iter();
 
         Ok(FileEntryIter::WalkDir {
             input_path: path.into(),
             iter,
+            game_kind,
         })
     }
 
@@ -77,23 +105,31 @@ impl FileEntryIter {
         P: AsRef<Path>,
     {
         let path = path.as_ref();
+        let extension = path
+            .extension()
+            .context("missing extension")?
+            .to_str()
+            .context("extension is not unicode")?;
+        let game_kind: GameKind = extension.parse()?;
         let file = File::open(path)
             .with_context(|| format!("failed to open input file from \"{}\"", path.display()))?;
-        Self::new_rgssad_file(file)
+        Self::new_rgssad_file(file, game_kind)
     }
 
     /// Create a new iter from the given rgssad file.
-    pub fn new_rgssad_file(file: File) -> anyhow::Result<Self> {
+    pub fn new_rgssad_file(file: File, game_kind: GameKind) -> anyhow::Result<Self> {
         let mut reader = rgssad::Reader::new(file);
         reader.read_header()?;
 
-        Ok(Self::Rgssad { reader })
+        Ok(Self::Rgssad { reader, game_kind })
     }
 
     /// Get the next file entry.
     pub fn next_file_entry(&mut self) -> anyhow::Result<Option<FileEntry>> {
         match self {
-            Self::WalkDir { input_path, iter } => {
+            Self::WalkDir {
+                input_path, iter, ..
+            } => {
                 // Filter out dir entries, to keep similar behavior with rgssad.
                 let entry = loop {
                     match iter.next() {
@@ -118,7 +154,7 @@ impl FileEntryIter {
                     file,
                 }))
             }
-            Self::Rgssad { reader } => {
+            Self::Rgssad { reader, .. } => {
                 let entry = match reader.read_entry()? {
                     Some(entry) => entry,
                     None => return Ok(None),
@@ -126,6 +162,14 @@ impl FileEntryIter {
 
                 Ok(Some(FileEntry::Rgssad { entry }))
             }
+        }
+    }
+
+    /// Get the determined game kind
+    pub fn game_kind(&self) -> GameKind {
+        match self {
+            Self::WalkDir { game_kind, .. } => *game_kind,
+            Self::Rgssad { game_kind, .. } => *game_kind,
         }
     }
 }

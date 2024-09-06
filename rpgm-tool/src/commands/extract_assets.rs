@@ -1,7 +1,9 @@
 mod file_entry_iter;
 
+use self::file_entry_iter::FileEntry;
 use self::file_entry_iter::FileEntryIter;
 use crate::util::ArrayLikeElement;
+use crate::GameKind;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
@@ -30,8 +32,8 @@ use std::path::PathBuf;
 #[derive(Debug, argh::FromArgs)]
 #[argh(
     subcommand,
-    name = "unpack",
-    description = "unpack a game into a format that is modifiable"
+    name = "extract-assets",
+    description = "extract the assets from a game into a format that is modifiable"
 )]
 pub struct Options {
     #[argh(
@@ -40,7 +42,7 @@ pub struct Options {
     )]
     pub input: PathBuf,
 
-    #[argh(positional, description = "the folder to unpack to")]
+    #[argh(positional, description = "the folder to extract-assets to")]
     pub output: PathBuf,
 
     #[argh(
@@ -180,10 +182,11 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
         .context("failed to canonicalize output path")?;
 
     let mut file_entry_iter = FileEntryIter::new(&options.input)?;
+    let game_kind = file_entry_iter.game_kind();
 
     while let Some(mut entry) = file_entry_iter.next_file_entry()? {
-        let raw_relative_path = entry.relative_path();
-        let relative_path_components = parse_relative_path(raw_relative_path)?;
+        let raw_relative_path = entry.relative_path().to_path_buf();
+        let relative_path_components = parse_relative_path(&raw_relative_path)?;
         let relative_path_display = relative_path_components.join("/");
         let output_path = {
             let mut output_path = options.output.clone();
@@ -191,72 +194,111 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             output_path
         };
 
-        eprintln!("extracting \"{relative_path_display}\"");
+        println!("extracting \"{relative_path_display}\"");
 
         if let Some(parent) = output_path.parent() {
             std::fs::create_dir_all(parent)
                 .with_context(|| format!("failed to create dir at \"{}\"", parent.display()))?;
         }
 
-        match relative_path_components.as_slice() {
-            ["Data", "Scripts.rxdata"] if !options.skip_extract_scripts => {
-                extract_scripts(entry, output_path)?;
+        match game_kind {
+            GameKind::Xp => {
+                extract_xp(&options, &mut entry, relative_path_components, output_path)?
             }
-            ["Data", "CommonEvents.rxdata"] if !options.skip_extract_common_events => {
-                extract_arraylike::<CommonEvent>(entry, output_path)?;
+            GameKind::Vx => {
+                extract_vx(&options, &mut entry, relative_path_components, output_path)?
             }
-            ["Data", "Actors.rxdata"] if !options.skip_extract_actors => {
-                extract_arraylike::<Actor>(entry, output_path)?;
-            }
-            ["Data", "Weapons.rxdata"] if !options.skip_extract_weapons => {
-                extract_arraylike::<Weapon>(entry, output_path)?;
-            }
-            ["Data", "Armors.rxdata"] if !options.skip_extract_armors => {
-                extract_arraylike::<Armor>(entry, output_path)?;
-            }
-            ["Data", "Skills.rxdata"] if !options.skip_extract_skills => {
-                extract_arraylike::<Skill>(entry, output_path)?;
-            }
-            ["Data", "States.rxdata"] if !options.skip_extract_states => {
-                extract_arraylike::<State>(entry, output_path)?;
-            }
-            ["Data", "Items.rxdata"] if !options.skip_extract_items => {
-                extract_arraylike::<Item>(entry, output_path)?;
-            }
-            ["Data", "Enemies.rxdata"] if !options.skip_extract_enemies => {
-                extract_arraylike::<Enemy>(entry, output_path)?;
-            }
-            ["Data", "Classes.rxdata"] if !options.skip_extract_classes => {
-                extract_arraylike::<Class>(entry, output_path)?;
-            }
-            ["Data", "Troops.rxdata"] if !options.skip_extract_troops => {
-                extract_arraylike::<Troop>(entry, output_path)?;
-            }
-            ["Data", "Tilesets.rxdata"] if !options.skip_extract_tilesets => {
-                extract_arraylike::<Tileset>(entry, output_path)?;
-            }
-            ["Data", "MapInfos.rxdata"] if !options.skip_extract_map_infos => {
-                extract_map_infos(entry, output_path)?;
-            }
-            ["Data", "System.rxdata"] if !options.skip_extract_system => {
-                extract_system(entry, output_path)?;
-            }
-            ["Data", file]
-                if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
-            {
-                extract_map(entry, output_path)?;
-            }
-            _ => {
-                let temp_path = nd_util::with_push_extension(&output_path, "temp");
-                // TODO: Lock?
-                // TODO: Drop delete guard for file?
-                let mut output_file = File::create(&temp_path).with_context(|| {
-                    format!("failed to open file at \"{}\"", output_path.display())
-                })?;
+        }
+    }
 
-                std::io::copy(&mut entry, &mut output_file)?;
-                std::fs::rename(&temp_path, &output_path)?;
-            }
+    Ok(())
+}
+
+fn extract_xp(
+    options: &Options,
+    entry: &mut FileEntry<'_>,
+    relative_path_components: Vec<&str>,
+    output_path: PathBuf,
+) -> anyhow::Result<()> {
+    match relative_path_components.as_slice() {
+        ["Data", "Scripts.rxdata"] if !options.skip_extract_scripts => {
+            extract_scripts(entry, output_path)?;
+        }
+        ["Data", "CommonEvents.rxdata"] if !options.skip_extract_common_events => {
+            extract_arraylike::<CommonEvent>(entry, output_path)?;
+        }
+        ["Data", "Actors.rxdata"] if !options.skip_extract_actors => {
+            extract_arraylike::<Actor>(entry, output_path)?;
+        }
+        ["Data", "Weapons.rxdata"] if !options.skip_extract_weapons => {
+            extract_arraylike::<Weapon>(entry, output_path)?;
+        }
+        ["Data", "Armors.rxdata"] if !options.skip_extract_armors => {
+            extract_arraylike::<Armor>(entry, output_path)?;
+        }
+        ["Data", "Skills.rxdata"] if !options.skip_extract_skills => {
+            extract_arraylike::<Skill>(entry, output_path)?;
+        }
+        ["Data", "States.rxdata"] if !options.skip_extract_states => {
+            extract_arraylike::<State>(entry, output_path)?;
+        }
+        ["Data", "Items.rxdata"] if !options.skip_extract_items => {
+            extract_arraylike::<Item>(entry, output_path)?;
+        }
+        ["Data", "Enemies.rxdata"] if !options.skip_extract_enemies => {
+            extract_arraylike::<Enemy>(entry, output_path)?;
+        }
+        ["Data", "Classes.rxdata"] if !options.skip_extract_classes => {
+            extract_arraylike::<Class>(entry, output_path)?;
+        }
+        ["Data", "Troops.rxdata"] if !options.skip_extract_troops => {
+            extract_arraylike::<Troop>(entry, output_path)?;
+        }
+        ["Data", "Tilesets.rxdata"] if !options.skip_extract_tilesets => {
+            extract_arraylike::<Tileset>(entry, output_path)?;
+        }
+        ["Data", "MapInfos.rxdata"] if !options.skip_extract_map_infos => {
+            extract_map_infos(entry, output_path)?;
+        }
+        ["Data", "System.rxdata"] if !options.skip_extract_system => {
+            extract_system(entry, output_path)?;
+        }
+        ["Data", file]
+            if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
+        {
+            extract_map(entry, output_path)?;
+        }
+        _ => {
+            let temp_path = nd_util::with_push_extension(&output_path, "temp");
+            // TODO: Lock?
+            // TODO: Drop delete guard for file?
+            let mut output_file = File::create(&temp_path)
+                .with_context(|| format!("failed to open file at \"{}\"", output_path.display()))?;
+
+            std::io::copy(entry, &mut output_file)?;
+            std::fs::rename(&temp_path, &output_path)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn extract_vx(
+    options: &Options,
+    entry: &mut FileEntry<'_>,
+    relative_path_components: Vec<&str>,
+    output_path: PathBuf,
+) -> anyhow::Result<()> {
+    match relative_path_components.as_slice() {
+        _ => {
+            let temp_path = nd_util::with_push_extension(&output_path, "temp");
+            // TODO: Lock?
+            // TODO: Drop delete guard for file?
+            let mut output_file = File::create(&temp_path)
+                .with_context(|| format!("failed to open file at \"{}\"", output_path.display()))?;
+
+            std::io::copy(entry, &mut output_file)?;
+            std::fs::rename(&temp_path, &output_path)?;
         }
     }
 
@@ -346,7 +388,6 @@ where
     for (index, value) in array.iter().enumerate() {
         if index == 0 {
             ensure!(value.is_none(), "{type_display_name} 0 should be nil");
-
             continue;
         }
 

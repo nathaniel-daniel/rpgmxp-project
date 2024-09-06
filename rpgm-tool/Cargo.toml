@@ -8,6 +8,7 @@ license = "MIT OR Apache-2.0"
 anyhow = "1.0.86"
 argh = "0.1.12"
 camino = "1.1.9"
+memchr = "2.7.4"
 nd-util = { git = "https://github.com/nathaniel-daniel/nd-util-rs", version = "0.0.0" }
 rgssad = { git = "https://github.com/nathaniel-daniel/rgssad-rs", version = "0.0.0" }
 rpgmxp-types = { version = "0.0.0", path = "../rpgmxp-types" }
