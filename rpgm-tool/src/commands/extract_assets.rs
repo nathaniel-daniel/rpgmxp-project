@@ -289,6 +289,9 @@ fn extract_vx(
     output_path: PathBuf,
 ) -> anyhow::Result<()> {
     match relative_path_components.as_slice() {
+        ["Data", "Scripts.rvdata"] if !options.skip_extract_scripts => {
+            extract_scripts(entry, output_path)?;
+        }
         ["Data", file]
             if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rvdata") =>
         {

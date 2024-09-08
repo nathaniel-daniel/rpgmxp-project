@@ -172,10 +172,10 @@ fn compile_xp(
         ["Data", "Scripts.rxdata"] if entry_file_type.is_dir() => {
             println!("packing \"{}\"", relative_path.display());
 
-            let scripts_rx_data = generate_scripts_rx_data(entry_path)?;
-            let size = u32::try_from(scripts_rx_data.len())?;
+            let scripts_data = generate_scripts_data(entry_path)?;
+            let size = u32::try_from(scripts_data.len())?;
 
-            file_sink.write_file(&relative_path_components, size, &*scripts_rx_data)?;
+            file_sink.write_file(&relative_path_components, size, &*scripts_data)?;
         }
         ["Data", "Scripts.rxdata", ..] => {
             // Ignore entries, we explore them in the above branch.
@@ -364,6 +364,17 @@ fn compile_vx(
     file_sink: &mut FileSink,
 ) -> anyhow::Result<()> {
     match relative_path_components.as_slice() {
+        ["Data", "Scripts.rvdata"] if entry_file_type.is_dir() => {
+            println!("packing \"{}\"", relative_path.display());
+
+            let scripts_data = generate_scripts_data(entry_path)?;
+            let size = u32::try_from(scripts_data.len())?;
+
+            file_sink.write_file(&relative_path_components, size, &*scripts_data)?;
+        }
+        ["Data", "Scripts.rvdata", ..] => {
+            // Ignore entries, we explore them in the above branch.
+        }
         ["Data", file] if crate::util::is_map_file_name(file, "json") => {
             println!("packing \"{}\"", relative_path.display());
 
@@ -406,7 +417,7 @@ fn set_extension_str(input: &str, extension: &str) -> String {
     format!("{stem}.{extension}")
 }
 
-fn generate_scripts_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
+fn generate_scripts_data(path: &Path) -> anyhow::Result<Vec<u8>> {
     let mut scripts_map = BTreeMap::new();
 
     for dir_entry in path.read_dir()? {
