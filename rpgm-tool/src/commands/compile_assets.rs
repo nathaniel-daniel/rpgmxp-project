@@ -304,7 +304,7 @@ fn compile_xp(
         ["Data", "MapInfos.rxdata"] if entry_file_type.is_dir() => {
             println!("packing \"{}\"", relative_path.display());
 
-            let rx_data = generate_map_infos_rx_data(entry_path)?;
+            let rx_data = generate_map_infos_data(entry_path)?;
             let size = u32::try_from(rx_data.len())?;
 
             file_sink.write_file(&relative_path_components, size, &*rx_data)?;
@@ -373,6 +373,17 @@ fn compile_vx(
             file_sink.write_file(&relative_path_components, size, &*scripts_data)?;
         }
         ["Data", "Scripts.rvdata", ..] => {
+            // Ignore entries, we explore them in the above branch.
+        }
+        ["Data", "MapInfos.rvdata"] if entry_file_type.is_dir() => {
+            println!("packing \"{}\"", relative_path.display());
+
+            let data = generate_map_infos_data(entry_path)?;
+            let size = u32::try_from(data.len())?;
+
+            file_sink.write_file(&relative_path_components, size, &*data)?;
+        }
+        ["Data", "MapInfos.rvdata", ..] => {
             // Ignore entries, we explore them in the above branch.
         }
         ["Data", file] if crate::util::is_map_file_name(file, "json") => {
@@ -536,7 +547,7 @@ where
     Ok(data)
 }
 
-fn generate_map_infos_rx_data(path: &Path) -> anyhow::Result<Vec<u8>> {
+fn generate_map_infos_data(path: &Path) -> anyhow::Result<Vec<u8>> {
     let mut map: BTreeMap<i32, MapInfo> = BTreeMap::new();
 
     for dir_entry in path.read_dir()? {

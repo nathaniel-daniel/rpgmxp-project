@@ -292,6 +292,9 @@ fn extract_vx(
         ["Data", "Scripts.rvdata"] if !options.skip_extract_scripts => {
             extract_scripts(entry, output_path)?;
         }
+        ["Data", "MapInfos.rvdata"] if !options.skip_extract_map_infos => {
+            extract_map_infos(entry, output_path)?;
+        }
         ["Data", file]
             if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rvdata") =>
         {
