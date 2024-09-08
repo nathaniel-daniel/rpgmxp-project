@@ -60,3 +60,44 @@ pub(crate) fn string_array2ruby_string_array(
     Ok(arena.create_array(value).into())
 }
 */
+
+pub(crate) fn optional_ruby_string_array2optional_string_array(
+    ctx: &FromValueContext,
+    value: &Value,
+) -> Result<Vec<Option<String>>, FromValueError> {
+    struct Wrapper(Option<String>);
+
+    impl<'a> FromValue<'a> for Wrapper {
+        fn from_value(
+            ctx: &FromValueContext<'a>,
+            value: &'a Value,
+        ) -> Result<Self, FromValueError> {
+            if matches!(value, Value::Nil(_)) {
+                return Ok(Self(None));
+            }
+
+            let value = ruby_string2string(ctx, value)?;
+            Ok(Self(Some(value)))
+        }
+    }
+
+    let value: Vec<Wrapper> = FromValue::from_value(ctx, value)?;
+    let value = value.into_iter().map(|value| value.0).collect();
+
+    Ok(value)
+}
+
+pub(crate) fn optional_string_array2optional_ruby_string_array(
+    optional_string_array: Vec<Option<String>>,
+    arena: &mut ValueArena,
+) -> Result<ValueHandle, ruby_marshal::IntoValueError> {
+    let mut value = Vec::with_capacity(optional_string_array.len());
+    for optional_string in optional_string_array {
+        let handle = match optional_string {
+            Some(string) => string2ruby_string(string, arena)?,
+            None => arena.create_nil().into(),
+        };
+        value.push(handle);
+    }
+    Ok(arena.create_array(value).into())
+}

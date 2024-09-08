@@ -260,7 +260,7 @@ fn extract_xp(
             extract_map_infos(entry, output_path)?;
         }
         ["Data", "System.rxdata"] if !options.skip_extract_system => {
-            extract_system(entry, output_path)?;
+            extract_xp_system(entry, output_path)?;
         }
         ["Data", file]
             if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
@@ -294,6 +294,9 @@ fn extract_vx(
         }
         ["Data", "MapInfos.rvdata"] if !options.skip_extract_map_infos => {
             extract_map_infos(entry, output_path)?;
+        }
+        ["Data", "System.rvdata"] if !options.skip_extract_system => {
+            extract_vx_system(entry, output_path)?;
         }
         ["Data", file]
             if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rvdata") =>
@@ -461,7 +464,7 @@ where
     Ok(())
 }
 
-fn extract_system<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
+fn extract_xp_system<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
 where
     P: AsRef<Path>,
 {
@@ -471,6 +474,27 @@ where
     let arena = ruby_marshal::load(file)?;
     let ctx = FromValueContext::new(&arena);
     let system: rpgmxp_types::System = ctx.from_value(arena.root())?;
+
+    let temp_path = nd_util::with_push_extension(&path, "temp");
+    let mut file = File::create_new(&temp_path)?;
+    serde_json::to_writer_pretty(&mut file, &system)?;
+    file.flush()?;
+    file.sync_all()?;
+    std::fs::rename(temp_path, path)?;
+
+    Ok(())
+}
+
+fn extract_vx_system<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let path = path.as_ref();
+    let path = path.with_extension("json");
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let system: rpgmvx_types::System = ctx.from_value(arena.root())?;
 
     let temp_path = nd_util::with_push_extension(&path, "temp");
     let mut file = File::create_new(&temp_path)?;
