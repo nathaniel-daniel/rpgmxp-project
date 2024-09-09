@@ -148,6 +148,45 @@ version = "0.0.0"
 source = "git+https://github.com/nathaniel-daniel/rgssad-rs#f7e98db41f6b536e8dbc6049891a95432531ca35"
 
 [[package]]
+name = "rpgm-common-types"
+version = "0.0.0"
+dependencies = [
+ "flate2",
+ "ruby-marshal",
+ "ruby-marshal-derive",
+ "serde",
+]
+
+[[package]]
+name = "rpgm-tool"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "argh",
+ "camino",
+ "memchr",
+ "nd-util",
+ "rgssad",
+ "rpgm-common-types",
+ "rpgmvx-types",
+ "rpgmxp-types",
+ "ruby-marshal",
+ "serde",
+ "serde_json",
+ "walkdir",
+]
+
+[[package]]
+name = "rpgmvx-types"
+version = "0.0.0"
+dependencies = [
+ "rpgm-common-types",
+ "ruby-marshal",
+ "ruby-marshal-derive",
+ "serde",
+]
+
+[[package]]
 name = "rpgmxp-project"
 version = "0.0.0"
 dependencies = [
@@ -160,26 +199,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "rpgmxp-tool"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "argh",
- "camino",
- "nd-util",
- "rgssad",
- "rpgmxp-types",
- "ruby-marshal",
- "serde",
- "serde_json",
- "walkdir",
-]
-
-[[package]]
 name = "rpgmxp-types"
 version = "0.0.0"
 dependencies = [
- "flate2",
+ "rpgm-common-types",
  "ruby-marshal",
  "ruby-marshal-derive",
  "serde",

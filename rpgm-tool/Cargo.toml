@@ -1,5 +1,5 @@
 [package]
-name = "rpgmxp-tool"
+name = "rpgm-tool"
 version = "0.0.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -8,10 +8,13 @@ license = "MIT OR Apache-2.0"
 anyhow = "1.0.86"
 argh = "0.1.12"
 camino = "1.1.9"
+memchr = "2.7.4"
 nd-util = { git = "https://github.com/nathaniel-daniel/nd-util-rs", version = "0.0.0" }
 rgssad = { git = "https://github.com/nathaniel-daniel/rgssad-rs", version = "0.0.0" }
 rpgmxp-types = { version = "0.0.0", path = "../rpgmxp-types" }
+rpgmvx-types = { version = "0.0.0", path = "../rpgmvx-types" }
 ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs", version = "0.0.0" }
 serde = "1.0.209"
 serde_json = "1.0.127"
 walkdir = "2.5.0"
+rpgm-common-types = { version = "0.0.0", path = "../rpgm-common-types" }

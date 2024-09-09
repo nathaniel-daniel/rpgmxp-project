@@ -3,7 +3,8 @@ resolver = "2"
 members = [
     "rpgmxp-project",
     "rpgmxp-types",
-    "rpgmxp-tool",
+    "rpgm-tool",
+    "rpgmvx-types", "rpgm-common-types",
 ]
 
 [profile.release]
