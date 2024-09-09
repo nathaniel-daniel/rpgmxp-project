@@ -4,7 +4,7 @@ members = [
     "rpgmxp-project",
     "rpgmxp-types",
     "rpgm-tool",
-    "rpgmvx-types",
+    "rpgmvx-types", "rpgm-common-types",
 ]
 
 [profile.release]
