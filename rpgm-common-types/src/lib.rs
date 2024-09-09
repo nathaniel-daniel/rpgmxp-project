@@ -1,9 +1,11 @@
+pub mod color;
 pub mod map_info;
 pub mod script;
 pub mod system_test_battler;
 pub mod table;
 pub mod util;
 
+pub use self::color::*;
 pub use self::map_info::*;
 pub use self::script::*;
 pub use self::system_test_battler::*;
