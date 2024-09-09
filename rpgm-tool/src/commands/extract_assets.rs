@@ -14,8 +14,6 @@ use rpgmxp_types::Class;
 use rpgmxp_types::CommonEvent;
 use rpgmxp_types::Enemy;
 use rpgmxp_types::Item;
-use rpgmxp_types::MapInfo;
-use rpgmxp_types::ScriptList;
 use rpgmxp_types::Skill;
 use rpgmxp_types::State;
 use rpgmxp_types::Tileset;
@@ -364,7 +362,7 @@ where
 
     let arena = ruby_marshal::load(file)?;
     let ctx = FromValueContext::new(&arena);
-    let script_list: ScriptList = ctx.from_value(arena.root())?;
+    let script_list: rpgm_common_types::ScriptList = ctx.from_value(arena.root())?;
 
     for (script_index, script) in script_list.scripts.iter().enumerate() {
         println!("  extracting script \"{}\"", script.name);
@@ -440,7 +438,7 @@ where
 
     let arena = ruby_marshal::load(file)?;
     let ctx = FromValueContext::new(&arena);
-    let map: BTreeMap<i32, MapInfo> = ctx.from_value(arena.root())?;
+    let map: BTreeMap<i32, rpgm_common_types::MapInfo> = ctx.from_value(arena.root())?;
 
     for (index, value) in map.iter() {
         let name = value.name.as_str();

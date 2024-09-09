@@ -12,7 +12,6 @@ use rpgmxp_types::Class;
 use rpgmxp_types::CommonEvent;
 use rpgmxp_types::Enemy;
 use rpgmxp_types::Item;
-use rpgmxp_types::MapInfo;
 use rpgmxp_types::Script;
 use rpgmxp_types::ScriptList;
 use rpgmxp_types::Skill;
@@ -559,7 +558,7 @@ where
 }
 
 fn generate_map_infos_data(path: &Path) -> anyhow::Result<Vec<u8>> {
-    let mut map: BTreeMap<i32, MapInfo> = BTreeMap::new();
+    let mut map: BTreeMap<i32, rpgm_common_types::MapInfo> = BTreeMap::new();
 
     for dir_entry in path.read_dir()? {
         let dir_entry = dir_entry?;
@@ -583,7 +582,7 @@ fn generate_map_infos_data(path: &Path) -> anyhow::Result<Vec<u8>> {
         let dir_entry_path = dir_entry.path();
         let json = std::fs::read_to_string(dir_entry_path)?;
 
-        let value: MapInfo = serde_json::from_str(&json)?;
+        let value: rpgm_common_types::MapInfo = serde_json::from_str(&json)?;
 
         let old_entry = map.insert(index, value);
         if old_entry.is_some() {

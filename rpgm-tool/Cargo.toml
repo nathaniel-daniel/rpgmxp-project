@@ -17,3 +17,4 @@ ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs", ve
 serde = "1.0.209"
 serde_json = "1.0.127"
 walkdir = "2.5.0"
+rpgm-common-types = { version = "0.0.0", path = "../rpgm-common-types" }
