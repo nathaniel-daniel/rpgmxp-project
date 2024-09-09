@@ -315,7 +315,7 @@ fn compile_xp(
         ["Data", "System.json"] if entry_file_type.is_file() => {
             println!("packing \"{}\"", relative_path.display());
 
-            let data = generate_xp_system_data(entry_path)?;
+            let data = generate_ruby_data::<rpgmxp_types::System>(entry_path)?;
             let size = u32::try_from(data.len())?;
 
             let mut relative_path_components = relative_path_components.clone();
@@ -326,7 +326,7 @@ fn compile_xp(
         ["Data", file] if crate::util::is_map_file_name(file, "json") => {
             println!("packing \"{}\"", relative_path.display());
 
-            let map_data = generate_xp_map_data(entry_path)?;
+            let map_data = generate_ruby_data::<rpgmxp_types::Map>(entry_path)?;
             let size = u32::try_from(map_data.len())?;
 
             let renamed_file = set_extension_str(file, "rxdata");
@@ -389,7 +389,7 @@ fn compile_vx(
         ["Data", "System.json"] if entry_file_type.is_file() => {
             println!("packing \"{}\"", relative_path.display());
 
-            let data = generate_vx_system_data(entry_path)?;
+            let data = generate_ruby_data::<rpgmvx_types::System>(entry_path)?;
             let size = u32::try_from(data.len())?;
 
             let mut relative_path_components = relative_path_components.clone();
@@ -400,7 +400,7 @@ fn compile_vx(
         ["Data", file] if crate::util::is_map_file_name(file, "json") => {
             println!("packing \"{}\"", relative_path.display());
 
-            let map_data = generate_vx_map_data(entry_path)?;
+            let map_data = generate_ruby_data::<rpgmvx_types::Map>(entry_path)?;
             let size = u32::try_from(map_data.len())?;
 
             let renamed_file = set_extension_str(file, "rvdata");
@@ -601,51 +601,12 @@ fn generate_map_infos_data(path: &Path) -> anyhow::Result<Vec<u8>> {
     Ok(data)
 }
 
-fn generate_xp_system_data(path: &Path) -> anyhow::Result<Vec<u8>> {
-    let system = std::fs::read_to_string(path)?;
-    let system: rpgmxp_types::System = serde_json::from_str(&system)?;
-
-    let mut arena = ruby_marshal::ValueArena::new();
-    let handle = system.into_value(&mut arena)?;
-    arena.replace_root(handle);
-
-    let mut data = Vec::new();
-    ruby_marshal::dump(&mut data, &arena)?;
-
-    Ok(data)
-}
-
-fn generate_vx_system_data(path: &Path) -> anyhow::Result<Vec<u8>> {
-    let system = std::fs::read_to_string(path)?;
-    let system: rpgmvx_types::System = serde_json::from_str(&system)?;
-
-    let mut arena = ruby_marshal::ValueArena::new();
-    let handle = system.into_value(&mut arena)?;
-    arena.replace_root(handle);
-
-    let mut data = Vec::new();
-    ruby_marshal::dump(&mut data, &arena)?;
-
-    Ok(data)
-}
-
-fn generate_xp_map_data(path: &Path) -> anyhow::Result<Vec<u8>> {
+fn generate_ruby_data<T>(path: &Path) -> anyhow::Result<Vec<u8>>
+where
+    T: serde::de::DeserializeOwned + ruby_marshal::IntoValue,
+{
     let map = std::fs::read_to_string(path)?;
-    let map: rpgmxp_types::Map = serde_json::from_str(&map)?;
-
-    let mut arena = ruby_marshal::ValueArena::new();
-    let handle = map.into_value(&mut arena)?;
-    arena.replace_root(handle);
-
-    let mut data = Vec::new();
-    ruby_marshal::dump(&mut data, &arena)?;
-
-    Ok(data)
-}
-
-fn generate_vx_map_data(path: &Path) -> anyhow::Result<Vec<u8>> {
-    let map = std::fs::read_to_string(path)?;
-    let map: rpgmvx_types::Map = serde_json::from_str(&map)?;
+    let map: T = serde_json::from_str(&map)?;
 
     let mut arena = ruby_marshal::ValueArena::new();
     let handle = map.into_value(&mut arena)?;
