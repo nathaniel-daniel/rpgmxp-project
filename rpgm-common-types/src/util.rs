@@ -6,10 +6,7 @@ use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
 
-pub fn ruby_string2string(
-    ctx: &FromValueContext,
-    value: &Value,
-) -> Result<String, FromValueError> {
+pub fn ruby_string2string(ctx: &FromValueContext, value: &Value) -> Result<String, FromValueError> {
     let value: &StringValue = FromValue::from_value(ctx, value)?;
     let value = value.value();
     let value = std::str::from_utf8(value)

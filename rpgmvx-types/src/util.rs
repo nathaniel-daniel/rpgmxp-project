@@ -1,11 +1,11 @@
+pub(crate) use rpgm_common_types::ruby_string2string;
+pub(crate) use rpgm_common_types::string2ruby_string;
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueContext;
 use ruby_marshal::FromValueError;
 use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
-pub(crate) use rpgm_common_types::ruby_string2string;
-pub(crate) use rpgm_common_types::string2ruby_string;
 
 /*
 pub(crate) fn ruby_string_array2string_array(
