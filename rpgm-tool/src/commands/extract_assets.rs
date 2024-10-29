@@ -258,12 +258,12 @@ fn extract_xp(
             extract_map_infos(entry, output_path)?;
         }
         ["Data", "System.rxdata"] if !options.skip_extract_system => {
-            extract_xp_system(entry, output_path)?;
+            extract_ruby_data::<rpgmxp_types::System>(entry, output_path)?;
         }
         ["Data", file]
             if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
         {
-            extract_xp_map(entry, output_path)?;
+            extract_ruby_data::<rpgmxp_types::Map>(entry, output_path)?;
         }
         _ => {
             let temp_path = nd_util::with_push_extension(&output_path, "temp");
@@ -294,12 +294,12 @@ fn extract_vx(
             extract_map_infos(entry, output_path)?;
         }
         ["Data", "System.rvdata"] if !options.skip_extract_system => {
-            extract_vx_system(entry, output_path)?;
+            extract_ruby_data::<rpgmvx_types::System>(entry, output_path)?;
         }
         ["Data", file]
             if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rvdata") =>
         {
-            extract_vx_map(entry, output_path)?;
+            extract_ruby_data::<rpgmvx_types::Map>(entry, output_path)?;
         }
         _ => {
             let temp_path = nd_util::with_push_extension(&output_path, "temp");
@@ -462,91 +462,24 @@ where
     Ok(())
 }
 
-fn extract_xp_system<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
+fn extract_ruby_data<T>(file: impl std::io::Read, path: impl AsRef<Path>) -> anyhow::Result<()>
 where
-    P: AsRef<Path>,
+    T: serde::Serialize + for<'a> ruby_marshal::FromValue<'a>,
 {
     let path = path.as_ref();
     let path = path.with_extension("json");
 
     let arena = ruby_marshal::load(file)?;
     let ctx = FromValueContext::new(&arena);
-    let system: rpgmxp_types::System = ctx.from_value(arena.root())?;
-
-    let temp_path = nd_util::with_push_extension(&path, "temp");
-    let mut file = File::create_new(&temp_path)?;
-    serde_json::to_writer_pretty(&mut file, &system)?;
-    file.flush()?;
-    file.sync_all()?;
-    std::fs::rename(temp_path, path)?;
-
-    Ok(())
-}
-
-fn extract_vx_system<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
-where
-    P: AsRef<Path>,
-{
-    let path = path.as_ref();
-    let path = path.with_extension("json");
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let system: rpgmvx_types::System = ctx.from_value(arena.root())?;
-
-    let temp_path = nd_util::with_push_extension(&path, "temp");
-    let mut file = File::create_new(&temp_path)?;
-    serde_json::to_writer_pretty(&mut file, &system)?;
-    file.flush()?;
-    file.sync_all()?;
-    std::fs::rename(temp_path, path)?;
-
-    Ok(())
-}
-
-fn extract_xp_map<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
-where
-    P: AsRef<Path>,
-{
-    use rpgmxp_types::Map;
-
-    let path = path.as_ref();
-    let path = path.with_extension("json");
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let map: Map = ctx.from_value(arena.root())?;
-    let map = serde_json::to_string_pretty(&map)?;
+    let data: T = ctx.from_value(arena.root())?;
 
     // TODO: Lock?
     // TODO: Drop delete guard for file?
     let temp_path = nd_util::with_push_extension(&path, "temp");
-    std::fs::write(&temp_path, map)?;
-
-    std::fs::rename(temp_path, path)?;
-
-    Ok(())
-}
-
-fn extract_vx_map<P>(file: impl std::io::Read, path: P) -> anyhow::Result<()>
-where
-    P: AsRef<Path>,
-{
-    use rpgmvx_types::Map;
-
-    let path = path.as_ref();
-    let path = path.with_extension("json");
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let map: Map = ctx.from_value(arena.root())?;
-    let map = serde_json::to_string_pretty(&map)?;
-
-    // TODO: Lock?
-    // TODO: Drop delete guard for file?
-    let temp_path = nd_util::with_push_extension(&path, "temp");
-    std::fs::write(&temp_path, map)?;
-
+    let mut file = File::create_new(&temp_path)?;
+    serde_json::to_writer_pretty(&mut file, &data)?;
+    file.flush()?;
+    file.sync_all()?;
     std::fs::rename(temp_path, path)?;
 
     Ok(())

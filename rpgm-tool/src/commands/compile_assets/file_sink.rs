@@ -88,7 +88,7 @@ impl FileSink {
                 // Create a windows-style path.
                 let path = path_components.join("\\");
 
-                writer.write_entry(&path, size, reader)?;
+                writer.write_file(&path, size, reader)?;
             }
         }
 
