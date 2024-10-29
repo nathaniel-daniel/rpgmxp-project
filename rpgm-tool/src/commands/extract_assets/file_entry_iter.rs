@@ -155,12 +155,12 @@ impl FileEntryIter {
                 }))
             }
             Self::Rgssad { reader, .. } => {
-                let entry = match reader.read_entry()? {
-                    Some(entry) => entry,
+                let file = match reader.read_file()? {
+                    Some(file) => file,
                     None => return Ok(None),
                 };
 
-                Ok(Some(FileEntry::Rgssad { entry }))
+                Ok(Some(FileEntry::Rgssad { file }))
             }
         }
     }
@@ -181,7 +181,7 @@ pub enum FileEntry<'a> {
         file: File,
     },
     Rgssad {
-        entry: rgssad::reader::Entry<'a, File>,
+        file: rgssad::reader::File<'a, File>,
     },
 }
 
@@ -190,7 +190,7 @@ impl FileEntry<'_> {
     pub fn relative_path(&self) -> &Utf8Path {
         match self {
             Self::WalkDir { relative_path, .. } => relative_path,
-            Self::Rgssad { entry } => Utf8Path::new(entry.file_name()),
+            Self::Rgssad { file } => Utf8Path::new(file.name()),
         }
     }
 }
@@ -199,7 +199,7 @@ impl Read for FileEntry<'_> {
     fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
         match self {
             Self::WalkDir { file, .. } => file.read(buffer),
-            Self::Rgssad { entry } => entry.read(buffer),
+            Self::Rgssad { file } => file.read(buffer),
         }
     }
 }

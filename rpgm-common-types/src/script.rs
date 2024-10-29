@@ -1,5 +1,6 @@
 use flate2::bufread::ZlibDecoder;
 use flate2::bufread::ZlibEncoder;
+use flate2::Compression;
 use ruby_marshal::ArrayValue;
 use ruby_marshal::FromValue;
 use ruby_marshal::FromValueContext;
@@ -11,6 +12,8 @@ use ruby_marshal::Value;
 use ruby_marshal::ValueArena;
 use ruby_marshal::ValueHandle;
 use std::io::Read;
+
+const ARRAY_LEN: usize = 3;
 
 /// A list of compressed scripts
 #[derive(Debug)]
@@ -66,7 +69,7 @@ impl std::fmt::Display for ScriptFromValueError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidArrayLen { len } => {
-                write!(f, "invalid script array len of {len}, expected 3")
+                write!(f, "invalid script array len of {len}, expected {ARRAY_LEN}")
             }
             Self::InvalidName { .. } => {
                 write!(f, "the script name is invalid")
@@ -113,7 +116,7 @@ impl<'a> FromValue<'a> for CompressedScript {
         let script = script.value();
 
         let array_len = script.len();
-        if array_len != 3 {
+        if array_len != ARRAY_LEN {
             return Err(ScriptFromValueError::InvalidArrayLen { len: array_len }.into());
         }
 
@@ -184,7 +187,8 @@ impl IntoValue for Script {
         let id = self.id.into_value(arena)?;
         let name = arena.create_string(self.name.into()).into_raw();
 
-        let mut encoder = ZlibEncoder::new(self.data.as_bytes(), Default::default());
+        let compression = Compression::default();
+        let mut encoder = ZlibEncoder::new(self.data.as_bytes(), compression);
         let mut data = Vec::new();
         encoder
             .read_to_end(&mut data)
