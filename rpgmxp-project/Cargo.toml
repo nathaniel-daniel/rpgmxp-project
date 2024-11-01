@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.91"
+anyhow = "1.0.92"
 argh = "0.1.12"
 rpgmxp-types = { path = "../rpgmxp-types" }
 ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs" }
