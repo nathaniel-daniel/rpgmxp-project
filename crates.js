@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["rpgm_common_types","rpgm_tool","rpgmvx_types","rpgmxp_project","rpgmxp_types"];
