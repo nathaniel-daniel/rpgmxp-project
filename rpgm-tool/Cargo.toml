@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.92"
+anyhow = "1.0.93"
 argh = "0.1.12"
 camino = "1.1.9"
 memchr = "2.7.4"
@@ -14,7 +14,7 @@ rgssad = { git = "https://github.com/nathaniel-daniel/rgssad-rs", version = "0.0
 rpgmxp-types = { version = "0.0.0", path = "../rpgmxp-types" }
 rpgmvx-types = { version = "0.0.0", path = "../rpgmvx-types" }
 ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs", version = "0.0.0" }
-serde = "1.0.214"
-serde_json = "1.0.132"
+serde = "1.0.215"
+serde_json = "1.0.133"
 walkdir = "2.5.0"
 rpgm-common-types = { version = "0.0.0", path = "../rpgm-common-types" }
