@@ -38,7 +38,7 @@ pub struct Tone {
     pub gray: f64,
 }
 
-impl<'a> FromValue<'a> for Tone {
+impl FromValue<'_> for Tone {
     fn from_value(ctx: &FromValueContext, value: &Value) -> Result<Self, FromValueError> {
         let user_defined: &UserDefinedValue = FromValue::from_value(ctx, value)?;
         let name = user_defined.name();
