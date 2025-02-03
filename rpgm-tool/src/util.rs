@@ -42,9 +42,7 @@ pub fn is_map_file_name(file_name: &str, expected_extension: &str) -> bool {
             }
         })
         .and_then(|file_name| file_name.strip_prefix("Map"))
-        .map_or(false, |map_n| {
-            !map_n.is_empty() && map_n.chars().all(|c| c.is_ascii_digit())
-        })
+        .is_some_and(|map_n| !map_n.is_empty() && map_n.chars().all(|c| c.is_ascii_digit()))
 }
 
 /// Percent-escape a file name.
