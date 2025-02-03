@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["compile_assets","extract_assets"]};
