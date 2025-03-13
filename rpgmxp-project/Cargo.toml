@@ -5,9 +5,9 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.97"
 argh = "0.1.13"
 rpgmxp-types = { path = "../rpgmxp-types" }
 ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs" }
-serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0.138"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"

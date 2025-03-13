@@ -117,7 +117,7 @@ impl<'a> FromValue<'a> for Table {
         let value_len = value.len();
         if i32::try_from(value_len)
             .ok()
-            .map_or(true, |value_len| value_len != 2 * size)
+            .is_none_or(|value_len| value_len != 2 * size)
         {
             return Err(FromValueError::new_other(
                 TableFromValueError::ItemSizeMismatch {

@@ -8,4 +8,4 @@ license = "MIT OR Apache-2.0"
 rpgm-common-types = { version = "0.0.0", path = "../rpgm-common-types" }
 ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs" }
 ruby-marshal-derive = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs" }
-serde = { version = "1.0.217", features = [ "derive" ] }
+serde = { version = "1.0.219", features = [ "derive" ] }
