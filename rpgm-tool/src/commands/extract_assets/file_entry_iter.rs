@@ -243,7 +243,7 @@ impl FixedFileInfo {
             .ok()
             .context("failed to read file version ls")?;
         let file_version =
-            u64::from(file_version_ms.get(LE)) << 32 | u64::from(file_version_ls.get(LE));
+            (u64::from(file_version_ms.get(LE)) << 32) | u64::from(file_version_ls.get(LE));
 
         let product_version_ms: U32<LE> = *reader
             .read(offset)
@@ -254,7 +254,7 @@ impl FixedFileInfo {
             .ok()
             .context("failed to read product version ls")?;
         let product_version =
-            u64::from(product_version_ms.get(LE)) << 32 | u64::from(product_version_ls.get(LE));
+            (u64::from(product_version_ms.get(LE)) << 32) | u64::from(product_version_ls.get(LE));
 
         let file_flags_mask: U32<LE> = *reader
             .read(offset)
@@ -292,7 +292,7 @@ impl FixedFileInfo {
             .read(offset)
             .ok()
             .context("failed to read file date ls")?;
-        let file_date = u64::from(file_date_ms.get(LE)) << 32 | u64::from(file_date_ls.get(LE));
+        let file_date = (u64::from(file_date_ms.get(LE)) << 32) | u64::from(file_date_ls.get(LE));
 
         Ok(Self {
             struct_version,
