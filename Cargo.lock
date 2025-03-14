@@ -126,6 +126,15 @@ version = "0.0.0"
 source = "git+https://github.com/nathaniel-daniel/nd-util-rs#9fdf68ea3f07f912a77e0ad474469c4f342cfbf0"
 
 [[package]]
+name = "object"
+version = "0.36.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62948e14d923ea95ea2c7c86c71013138b66525b86bdc08d2dcc262bdb497b87"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "oval"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -138,6 +147,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a31971752e70b8b2686d7e46ec17fb38dad4051d94024c88df49b667caea9c84"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.37.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "165859e9e55f79d67b96c5d96f4e88b6f2695a1972849c15a6a3f5c59fc2c003"
+dependencies = [
+ "memchr",
+ "serde",
 ]
 
 [[package]]
@@ -174,8 +193,9 @@ dependencies = [
  "anyhow",
  "argh",
  "camino",
- "memchr",
  "nd-util",
+ "object",
+ "quick-xml",
  "rgssad",
  "rpgm-common-types",
  "rpgmvx-types",
