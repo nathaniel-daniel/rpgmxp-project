@@ -679,9 +679,6 @@ impl FileEntryIter {
 
         let game_kind = (|| {
             let game_exe = std::fs::read(path.join("Game.exe"))?;
-            if memchr::memmem::find(&game_exe, b"R\x00G\x00S\x00S\x002\x00").is_some() {
-                // return Ok(GameKind::Vx);
-            }
 
             if let Some(game_kind) = guess_game_kind_from_exe(&game_exe)? {
                 return Ok(game_kind);

@@ -193,7 +193,6 @@ dependencies = [
  "anyhow",
  "argh",
  "camino",
- "memchr",
  "nd-util",
  "object",
  "quick-xml",
