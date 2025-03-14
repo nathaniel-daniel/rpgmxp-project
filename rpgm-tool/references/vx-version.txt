@@ -1,0 +1,24 @@
+FILEVERSION    2,0,0,1
+PRODUCTVERSION 2,0,0,1
+FILEFLAGSMASK  0x3F
+FILEFLAGS      0x0
+FILEOS         VOS_NT_WINDOWS32
+FILETYPE       VFT_APP
+FILESUBTYPE    0x0
+{
+  BLOCK "StringFileInfo"
+  {
+    BLOCK "000004b0"
+    {
+      VALUE "FileDescription",   "RGSS2 Player"
+      VALUE "FileVersion",       "2, 0, 0, 1"
+      VALUE "LegalCopyright",    "Copyright (C) 2007 Enterbrain, Inc. / Yoji Ojima"
+      VALUE "ProductName",       "Ruby Game Scripting System"
+      VALUE "ProductVersion",    "2, 0, 0, 1"
+    }
+  }
+  BLOCK "VarFileInfo"
+  {
+    VALUE "Translation", 0x0, 1200
+  }
+}
