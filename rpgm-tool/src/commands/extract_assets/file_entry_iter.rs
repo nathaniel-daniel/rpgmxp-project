@@ -10,6 +10,130 @@ use std::path::Path;
 use std::path::PathBuf;
 use walkdir::WalkDir;
 
+#[derive(serde::Deserialize, Debug)]
+pub struct Assembly {
+    #[serde(rename = "assemblyIdentity")]
+    pub assembly_identity: AssemblyIdentity,
+
+    pub description: Option<Description>,
+}
+
+#[derive(serde::Deserialize, Debug)]
+#[expect(dead_code)]
+pub struct AssemblyIdentity {
+    #[serde(rename = "@version")]
+    pub version: String,
+
+    #[serde(rename = "@processorArchitecture")]
+    pub processor_architecture: Option<String>,
+
+    #[serde(rename = "@name")]
+    pub name: String,
+
+    #[serde(rename = "@type")]
+    pub type_: String,
+}
+
+#[derive(serde::Deserialize, Debug)]
+pub struct Description {
+    #[serde(rename = "$value")]
+    pub value: String,
+}
+
+/// See: https://learn.microsoft.com/en-us/windows/win32/menurc/resource-types
+/// See: https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oe376/6c085406-a698-4e12-9d4d-c3b0ee3dbc4a
+fn guess_game_kind_from_exe(game_exe: &[u8]) -> anyhow::Result<Option<GameKind>> {
+    use object::pe::RT_MANIFEST;
+    use object::read::File;
+    use object::LittleEndian as LE;
+
+    let file = File::parse(game_exe)?;
+    let (section_table, data_directories) = match file {
+        File::Pe32(file) => (file.section_table(), file.data_directories()),
+        File::Pe64(file) => (file.section_table(), file.data_directories()),
+        _ => bail!("unknown object file format {:?}", file.format()),
+    };
+
+    let resource_directory = data_directories.resource_directory(game_exe, &section_table)?;
+    let resource_directory = match resource_directory {
+        Some(resource_directory) => resource_directory,
+        None => return Ok(None),
+    };
+
+    let root = resource_directory.root()?;
+    let manifest_entry = root
+        .entries
+        .iter()
+        .find(|entry| entry.name_or_id().id() == Some(RT_MANIFEST));
+    let manifest_entry = match manifest_entry {
+        Some(manifest_entry) => manifest_entry,
+        None => return Ok(None),
+    };
+
+    let manifest_entry_data = manifest_entry.data(resource_directory)?;
+    let manifest_entry_table = manifest_entry_data
+        .table()
+        .context("object MANIFEST data is not a table")?;
+
+    let manifest_entry_table_entry_data = manifest_entry_table
+        .entries
+        .first()
+        .context("object MANIFEST table missing entry 0")?
+        .data(resource_directory)?;
+    let manifest_entry_table_entry_data_table = manifest_entry_table_entry_data
+        .table()
+        .context("object MANIFEST table entry 0 is not a table")?;
+
+    let manifest_entry_table_entry_data_table_entry_data = manifest_entry_table_entry_data_table
+        .entries
+        .first()
+        .context("object MANIFEST table entry 0 table missing entry 0")?
+        .data(resource_directory)?
+        .data()
+        .context("object MANIFEST table entry 0 table entry 0 is not data")?;
+    let manifest_offset = manifest_entry_table_entry_data_table_entry_data
+        .offset_to_data
+        .get(LE);
+    let manifest_size = usize::try_from(
+        manifest_entry_table_entry_data_table_entry_data
+            .size
+            .get(LE),
+    )?;
+    let manifest_code_page = manifest_entry_table_entry_data_table_entry_data
+        .code_page
+        .get(LE);
+
+    let manifest_bytes = &section_table
+        .pe_data_at(game_exe, manifest_offset)
+        .context("failed to get object manifest bytes")?
+        .get(..manifest_size)
+        .context("object manifest smaller than declared")?;
+
+    let manifest_string = match manifest_code_page {
+        0 => {
+            // This isn't a real LCID from what I can tell,
+            // but rather a null value. Assume ASCII for now.
+            // TODO: Detect encoding dynamically?
+
+            std::str::from_utf8(manifest_bytes)?.to_string()
+        }
+        _ => bail!("unknown manifest LCID {manifest_code_page}"),
+    };
+
+    let manifest: Assembly = quick_xml::de::from_str(&manifest_string)?;
+    if manifest.assembly_identity.name == "Enterbrain.RGSS.Game"
+        && manifest
+            .description
+            .as_ref()
+            .map(|description| description.value.as_str())
+            == Some("RGSS Player")
+    {
+        return Ok(Some(GameKind::Xp));
+    }
+
+    Ok(None)
+}
+
 /// A lending iter over files.
 pub enum FileEntryIter {
     WalkDir {
@@ -85,6 +209,10 @@ impl FileEntryIter {
             let game_exe = std::fs::read(path.join("Game.exe"))?;
             if memchr::memmem::find(&game_exe, b"R\x00G\x00S\x00S\x002\x00").is_some() {
                 return Ok(GameKind::Vx);
+            }
+
+            if let Some(game_kind) = guess_game_kind_from_exe(&game_exe)? {
+                return Ok(game_kind);
             }
 
             bail!("failed to determine game type");
