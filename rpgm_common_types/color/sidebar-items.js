@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["USER_DEFINED_NAME"],"enum":["ColorFromValueError"],"struct":["Color"]};
