@@ -380,7 +380,7 @@ where
 
         let escaped_script_name = crate::util::percent_escape_file_name(&script.name);
 
-        let out_path = temp_dir_path.join(format!("{script_index}-{escaped_script_name}.rb"));
+        let out_path = temp_dir_path.join(format!("{script_index:03}-{escaped_script_name}.rb"));
         let temp_path = nd_util::with_push_extension(&out_path, "temp");
 
         // TODO: Lock?
@@ -420,7 +420,7 @@ where
         println!("  extracting {} \"{}\"", type_display_name, value.name());
 
         let name = value.name();
-        let file_name = format!("{index}-{name}.json");
+        let file_name = format!("{index:03}-{name}.json");
         let file_name = crate::util::percent_escape_file_name(file_name.as_str());
         let out_path = dir_path.join(file_name);
         let temp_path = nd_util::with_push_extension(&out_path, "temp");
@@ -456,7 +456,7 @@ where
 
         println!("  extracting map info \"{name}\"");
 
-        let out_path = dir_path.join(format!("{index}-{name}.json"));
+        let out_path = dir_path.join(format!("{index:03}-{name}.json"));
         let temp_path = nd_util::with_push_extension(&out_path, "temp");
 
         // TODO: Lock?
