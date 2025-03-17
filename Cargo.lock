@@ -187,26 +187,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rpgm-tool"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "argh",
- "camino",
- "nd-util",
- "object",
- "quick-xml",
- "rgssad",
- "rpgm-common-types",
- "rpgmvx-types",
- "rpgmxp-types",
- "ruby-marshal",
- "serde",
- "serde_json",
- "walkdir",
-]
-
-[[package]]
 name = "rpgmvx-types"
 version = "0.0.0"
 dependencies = [
@@ -226,6 +206,26 @@ dependencies = [
  "ruby-marshal",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "rpgmxp-tool"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "argh",
+ "camino",
+ "nd-util",
+ "object",
+ "quick-xml",
+ "rgssad",
+ "rpgm-common-types",
+ "rpgmvx-types",
+ "rpgmxp-types",
+ "ruby-marshal",
+ "serde",
+ "serde_json",
+ "walkdir",
 ]
 
 [[package]]

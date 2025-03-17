@@ -7,6 +7,7 @@ use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
 use rpgmxp_types::Actor;
+use rpgmxp_types::Animation;
 use rpgmxp_types::Armor;
 use rpgmxp_types::Class;
 use rpgmxp_types::CommonEvent;
@@ -321,6 +322,17 @@ fn compile_xp(
             *relative_path_components.last_mut().unwrap() = "System.rxdata";
 
             file_sink.write_file(&relative_path_components, size, &*data)?;
+        }
+        ["Data", "Animations.rxdata"] if entry_file_type.is_dir() => {
+            println!("packing \"{}\"", relative_path.display());
+
+            let rx_data = generate_arraylike_rx_data::<Animation>(entry_path)?;
+            let size = u32::try_from(rx_data.len())?;
+
+            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
+        }
+        ["Data", "Animations.rxdata", ..] => {
+            // Ignore entries, we explore them in the above branch.
         }
         ["Data", file] if crate::util::is_map_file_name(file, "json") => {
             println!("packing \"{}\"", relative_path.display());

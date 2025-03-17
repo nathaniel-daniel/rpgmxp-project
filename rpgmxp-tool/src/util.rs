@@ -1,6 +1,7 @@
 use anyhow::bail;
 use anyhow::Context;
 use rpgmxp_types::Actor;
+use rpgmxp_types::Animation;
 use rpgmxp_types::Armor;
 use rpgmxp_types::Class;
 use rpgmxp_types::CommonEvent;
@@ -54,11 +55,12 @@ pub fn is_map_file_name(file_name: &str, expected_extension: &str) -> bool {
 /// * '/'
 /// * '<'
 /// * '>'
+/// * '?'
 pub fn percent_escape_file_name(file_name: &str) -> String {
     let mut escaped = String::with_capacity(file_name.len());
     for c in file_name.chars() {
         match c {
-            '%' | ':' | '*' | '/' | '<' | '>' => {
+            '%' | ':' | '*' | '/' | '<' | '>' | '?' => {
                 let c = u32::from(c);
                 write!(&mut escaped, "%{c:02x}").unwrap();
             }
@@ -227,6 +229,16 @@ impl ArrayLikeElement<'_> for Troop {
 impl ArrayLikeElement<'_> for Tileset {
     fn type_display_name() -> &'static str {
         "tileset"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Animation {
+    fn type_display_name() -> &'static str {
+        "animation"
     }
 
     fn name(&self) -> &str {

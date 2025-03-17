@@ -9,16 +9,16 @@ This is due to differences in compression and the fact that this library does no
 ### Usage
 ```bash
 # Unpacking a game
-rpgm-tool unpack path/to/game/dir unpacked
+rpgmxp-tool unpack path/to/game/dir unpacked
 
 # Unpacking an rgssad
-rpgm-tool unpack path/to/game/dir/Game.rgssad unpacked
+rpgmxp-tool unpack path/to/game/dir/Game.rgssad unpacked
 
 # Packing a game
-rpgm-tool pack unpacked path/to/new/dir
+rpgmxp-tool pack unpacked path/to/new/dir
 
 # Packing an rgssad
-rpgm-tool pack unpacked path/to/new/dir/Game.rgssad
+rpgmxp-tool pack unpacked path/to/new/dir/Game.rgssad
 ```
 
 ## Notes

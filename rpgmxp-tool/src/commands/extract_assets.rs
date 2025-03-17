@@ -9,6 +9,7 @@ use anyhow::ensure;
 use anyhow::Context;
 use camino::Utf8Path;
 use rpgmxp_types::Actor;
+use rpgmxp_types::Animation;
 use rpgmxp_types::Armor;
 use rpgmxp_types::Class;
 use rpgmxp_types::CommonEvent;
@@ -149,6 +150,13 @@ pub struct Options {
 
     #[argh(
         switch,
+        long = "skip-extract-animations",
+        description = "whether animations should not be extracted"
+    )]
+    pub skip_extract_animations: bool,
+
+    #[argh(
+        switch,
         long = "skip-extract-maps",
         description = "whether maps should not be extracted"
     )]
@@ -260,6 +268,9 @@ fn extract_xp(
         ["Data", "System.rxdata"] if !options.skip_extract_system => {
             extract_ruby_data::<rpgmxp_types::System>(entry, output_path)?;
         }
+        ["Data", "Animations.rxdata"] if !options.skip_extract_animations => {
+            extract_arraylike::<Animation>(entry, output_path)?;
+        }
         ["Data", file]
             if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
         {
@@ -369,7 +380,7 @@ where
 
         let escaped_script_name = crate::util::percent_escape_file_name(&script.name);
 
-        let out_path = temp_dir_path.join(format!("{script_index}-{escaped_script_name}.rb"));
+        let out_path = temp_dir_path.join(format!("{script_index:03}-{escaped_script_name}.rb"));
         let temp_path = nd_util::with_push_extension(&out_path, "temp");
 
         // TODO: Lock?
@@ -409,7 +420,7 @@ where
         println!("  extracting {} \"{}\"", type_display_name, value.name());
 
         let name = value.name();
-        let file_name = format!("{index}-{name}.json");
+        let file_name = format!("{index:03}-{name}.json");
         let file_name = crate::util::percent_escape_file_name(file_name.as_str());
         let out_path = dir_path.join(file_name);
         let temp_path = nd_util::with_push_extension(&out_path, "temp");
@@ -445,7 +456,7 @@ where
 
         println!("  extracting map info \"{name}\"");
 
-        let out_path = dir_path.join(format!("{index}-{name}.json"));
+        let out_path = dir_path.join(format!("{index:03}-{name}.json"));
         let temp_path = nd_util::with_push_extension(&out_path, "temp");
 
         // TODO: Lock?
