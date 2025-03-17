@@ -7,6 +7,7 @@ use camino::Utf8PathBuf;
 use object::LittleEndian as LE;
 use object::U16;
 use object::U32;
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -727,14 +728,31 @@ impl FileEntryIter {
             Self::WalkDir {
                 input_path, iter, ..
             } => {
-                // Filter out dir entries, to keep similar behavior with rgssad.
                 let entry = loop {
-                    match iter.next() {
-                        Some(Ok(entry)) if !entry.file_type().is_dir() => break entry,
-                        Some(Ok(_entry)) => {}
+                    let entry = match iter.next() {
+                        Some(Ok(entry)) => entry,
                         Some(Err(error)) => return Err(error).context("failed to read dir entry"),
                         None => return Ok(None),
                     };
+
+                    // Rgssad archives only contain the "Data" and "Graphics" folders at the top level.
+                    // Only include these folders for parity with rgssad archives.
+                    if entry.depth() == 1
+                        && ![OsStr::new("Data"), OsStr::new("Graphics")]
+                            .contains(&entry.file_name())
+                    {
+                        if entry.file_type().is_dir() {
+                            iter.skip_current_dir();
+                        }
+                        continue;
+                    }
+
+                    // Filter out dir entries, to keep similar behavior with rgssad.
+                    if entry.file_type().is_dir() {
+                        continue;
+                    }
+
+                    break entry;
                 };
                 ensure!(!entry.path_is_symlink());
 
