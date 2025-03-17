@@ -1,6 +1,7 @@
 use anyhow::bail;
 use anyhow::Context;
 use rpgmxp_types::Actor;
+use rpgmxp_types::Animation;
 use rpgmxp_types::Armor;
 use rpgmxp_types::Class;
 use rpgmxp_types::CommonEvent;
@@ -227,6 +228,16 @@ impl ArrayLikeElement<'_> for Troop {
 impl ArrayLikeElement<'_> for Tileset {
     fn type_display_name() -> &'static str {
         "tileset"
+    }
+
+    fn name(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl ArrayLikeElement<'_> for Animation {
+    fn type_display_name() -> &'static str {
+        "animation"
     }
 
     fn name(&self) -> &str {

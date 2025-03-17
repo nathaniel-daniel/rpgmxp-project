@@ -9,6 +9,7 @@ use anyhow::ensure;
 use anyhow::Context;
 use camino::Utf8Path;
 use rpgmxp_types::Actor;
+use rpgmxp_types::Animation;
 use rpgmxp_types::Armor;
 use rpgmxp_types::Class;
 use rpgmxp_types::CommonEvent;
@@ -149,6 +150,13 @@ pub struct Options {
 
     #[argh(
         switch,
+        long = "skip-extract-animations",
+        description = "whether animations should not be extracted"
+    )]
+    pub skip_extract_animations: bool,
+
+    #[argh(
+        switch,
         long = "skip-extract-maps",
         description = "whether maps should not be extracted"
     )]
@@ -259,6 +267,9 @@ fn extract_xp(
         }
         ["Data", "System.rxdata"] if !options.skip_extract_system => {
             extract_ruby_data::<rpgmxp_types::System>(entry, output_path)?;
+        }
+        ["Data", "Animations.rxdata"] if !options.skip_extract_animations => {
+            extract_arraylike::<Animation>(entry, output_path)?;
         }
         ["Data", file]
             if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
