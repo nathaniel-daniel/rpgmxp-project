@@ -55,11 +55,12 @@ pub fn is_map_file_name(file_name: &str, expected_extension: &str) -> bool {
 /// * '/'
 /// * '<'
 /// * '>'
+/// * '?'
 pub fn percent_escape_file_name(file_name: &str) -> String {
     let mut escaped = String::with_capacity(file_name.len());
     for c in file_name.chars() {
         match c {
-            '%' | ':' | '*' | '/' | '<' | '>' => {
+            '%' | ':' | '*' | '/' | '<' | '>' | '?' => {
                 let c = u32::from(c);
                 write!(&mut escaped, "%{c:02x}").unwrap();
             }
