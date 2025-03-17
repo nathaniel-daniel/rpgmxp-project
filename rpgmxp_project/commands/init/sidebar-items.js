@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["copy_data","copy_graphics","escape_file_name","exec","extract_scripts"],"struct":["DebugValue","Options"]};
