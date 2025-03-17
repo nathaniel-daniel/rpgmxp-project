@@ -1,5 +1,7 @@
 pub mod actor;
 pub mod animation;
+pub mod animation_frame;
+pub mod animation_timing;
 pub mod armor;
 pub mod audio_file;
 pub mod class;
@@ -34,13 +36,11 @@ pub mod troop_page;
 pub mod troop_page_condition;
 pub(crate) mod util;
 pub mod weapon;
-pub mod animation_frame;
-pub mod animation_timing;
 
-pub use self::animation_timing::AnimationTiming;
-pub use self::animation_frame::AnimationFrame;
 pub use self::actor::Actor;
 pub use self::animation::Animation;
+pub use self::animation_frame::AnimationFrame;
+pub use self::animation_timing::AnimationTiming;
 pub use self::armor::Armor;
 pub use self::audio_file::AudioFile;
 pub use self::class::Class;
