@@ -10,9 +10,9 @@ checksum = "512761e0bb2578dd7380c6baaa0f4ce03e84f95e960231d1dec8bf4d7d6e2627"
 
 [[package]]
 name = "anyhow"
-version = "1.0.97"
+version = "1.0.98"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcfed56ad506cb2c684a14971b8861fdc3baaaae314b9e5f9bb532cbe3ba7a4f"
+checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 
 [[package]]
 name = "argh"
@@ -75,9 +75,9 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "flate2"
-version = "1.1.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11faaf5a5236997af9848be0bef4db95824b1d534ebc64d0f0c6cf3e67bd38dc"
+checksum = "7ced92e76e966ca2fd84c8f7aa01a4aea65b0eb6648d72f7c8f3e2764a67fece"
 dependencies = [
  "crc32fast",
  "miniz_oxide",
@@ -123,7 +123,7 @@ dependencies = [
 [[package]]
 name = "nd-util"
 version = "0.0.0"
-source = "git+https://github.com/nathaniel-daniel/nd-util-rs#9fdf68ea3f07f912a77e0ad474469c4f342cfbf0"
+source = "git+https://github.com/nathaniel-daniel/nd-util-rs#edb8568bbde5ceb27c6dd41c63a5d756a9664163"
 
 [[package]]
 name = "object"
@@ -151,9 +151,9 @@ dependencies = [
 
 [[package]]
 name = "quick-xml"
-version = "0.37.4"
+version = "0.37.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4ce8c88de324ff838700f36fb6ab86c96df0e3c4ab6ef3a9b2044465cce1369"
+checksum = "331e97a1af0bf59823e6eadffe373d7b27f485be8748f71471c662c1f269b7fb"
 dependencies = [
  "memchr",
  "serde",
@@ -241,7 +241,7 @@ dependencies = [
 [[package]]
 name = "ruby-marshal"
 version = "0.0.0"
-source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs#a19ad6fa6069d5851a6d47ad94797831f3327816"
+source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs#e642d3fc078b6e6927300cd330efd945d4bf607c"
 dependencies = [
  "indexmap",
  "slotmap",
@@ -250,7 +250,7 @@ dependencies = [
 [[package]]
 name = "ruby-marshal-derive"
 version = "0.0.0"
-source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs#a19ad6fa6069d5851a6d47ad94797831f3327816"
+source = "git+https://github.com/nathaniel-daniel/ruby-marshal-rs#e642d3fc078b6e6927300cd330efd945d4bf607c"
 dependencies = [
  "proc-macro2",
  "quote",
