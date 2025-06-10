@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["guess_from_manifest_entry","guess_from_version_entry","guess_game_kind_from_exe","read_padding","read_utf16_nul_string"],"struct":["Assembly","AssemblyIdentity","Description","FixedFileInfo","StringFileInfo","StringStruct","StringTable","VersionInfo"]};

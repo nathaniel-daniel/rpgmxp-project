@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Bgm","Bgs","CompressedScript","CompressedScriptList","Event","Map","Script","ScriptList","Table"]};
