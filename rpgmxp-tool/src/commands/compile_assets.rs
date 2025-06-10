@@ -34,6 +34,7 @@ enum Format {
     Dir,
     Rgssad,
     Rgss2a,
+    Rgss3a,
 }
 
 impl FromStr for Format {
@@ -44,6 +45,7 @@ impl FromStr for Format {
             "dir" => Ok(Self::Dir),
             "rgssad" => Ok(Self::Rgssad),
             "rgss2a" => Ok(Self::Rgss2a),
+            "rgss3a" => Ok(Self::Rgss3a),
             _ => bail!("unknown format \"{input}\""),
         }
     }
@@ -104,6 +106,8 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
                 Format::Rgssad
             } else if extension == Some("rgss2a") {
                 Format::Rgss2a
+            } else if extension == Some("rgss3a") {
+                Format::Rgss3a
             } else {
                 Format::Dir
             }
@@ -112,7 +116,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
 
     let mut file_sink = match format {
         Format::Dir => FileSink::new_dir(&options.output, options.overwrite)?,
-        Format::Rgssad | Format::Rgss2a => {
+        Format::Rgssad | Format::Rgss2a | Format::Rgss3a => {
             FileSink::new_rgssad(&options.output, options.overwrite)?
         }
     };
@@ -122,6 +126,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
         }
         Format::Rgssad => Ok(GameKind::Xp),
         Format::Rgss2a => Ok(GameKind::Vx),
+        Format::Rgss3a => Ok(GameKind::VxAce),
     })?;
 
     for entry in WalkDir::new(&options.input) {
@@ -153,6 +158,7 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
                 relative_path_components,
                 &mut file_sink,
             )?,
+            GameKind::VxAce => todo!("compile_vx_ace"),
         }
     }
 

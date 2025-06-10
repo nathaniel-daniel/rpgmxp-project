@@ -213,6 +213,9 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
             GameKind::Vx => {
                 extract_vx(&options, &mut entry, relative_path_components, output_path)?
             }
+            GameKind::VxAce => {
+                todo!("extract_vx_ace");
+            }
         }
     }
 

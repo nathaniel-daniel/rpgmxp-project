@@ -9,6 +9,7 @@ use std::str::FromStr;
 pub enum GameKind {
     Xp,
     Vx,
+    VxAce,
 }
 
 impl GameKind {
@@ -21,6 +22,11 @@ impl GameKind {
     pub fn is_vx(self) -> bool {
         matches!(self, Self::Vx)
     }
+
+    /// Returns true if this is vx ace.
+    pub fn is_vx_ace(self) -> bool {
+        matches!(self, Self::VxAce)
+    }
 }
 
 impl FromStr for GameKind {
@@ -32,6 +38,13 @@ impl FromStr for GameKind {
         }
 
         if input.eq_ignore_ascii_case("vx") || input.eq_ignore_ascii_case("rgss2a") {
+            return Ok(Self::Vx);
+        }
+
+        if input.eq_ignore_ascii_case("vx-ace")
+            || input.eq_ignore_ascii_case("rgss3a")
+            || input.eq_ignore_ascii_case("ace")
+        {
             return Ok(Self::Vx);
         }
 
