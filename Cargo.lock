@@ -196,6 +196,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rpgmvx-ace-types"
+version = "0.0.0"
+dependencies = [
+ "flate2",
+ "itoa",
+ "ruby-marshal",
+ "ruby-marshal-derive",
+ "serde",
+]
+
+[[package]]
 name = "rpgmvx-types"
 version = "0.0.0"
 dependencies = [
@@ -230,6 +241,7 @@ dependencies = [
  "quick-xml",
  "rgssad",
  "rpgm-common-types",
+ "rpgmvx-ace-types",
  "rpgmvx-types",
  "rpgmxp-types",
  "ruby-marshal",

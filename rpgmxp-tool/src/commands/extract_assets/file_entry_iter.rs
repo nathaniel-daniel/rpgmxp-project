@@ -9,6 +9,7 @@ use camino::Utf8Path;
 use camino::Utf8PathBuf;
 use std::ffi::OsStr;
 use std::fs::File;
+use std::io::BufReader;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
@@ -177,7 +178,7 @@ impl FileEntryIter {
 
                 Ok(Some(FileEntry::WalkDir {
                     relative_path: relative_path.into(),
-                    file,
+                    file: BufReader::new(file),
                 }))
             }
             Self::Rgssad { reader, .. } => {
@@ -204,7 +205,7 @@ impl FileEntryIter {
 pub enum FileEntry<'a> {
     WalkDir {
         relative_path: Utf8PathBuf,
-        file: File,
+        file: BufReader<File>,
     },
     Rgssad {
         file: rgssad::reader::File<'a, File>,
