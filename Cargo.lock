@@ -201,6 +201,8 @@ version = "0.0.0"
 dependencies = [
  "flate2",
  "itoa",
+ "rpgm-common-types",
+ "rpgmvx-types",
  "ruby-marshal",
  "ruby-marshal-derive",
  "serde",

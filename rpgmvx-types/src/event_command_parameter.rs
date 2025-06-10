@@ -1,4 +1,7 @@
+use crate::Bgm;
+use crate::Bgs;
 use crate::Color;
+use crate::Me;
 use crate::MoveCommand;
 use crate::MoveRoute;
 use crate::Se;
@@ -54,17 +57,34 @@ impl std::fmt::Display for EventCommandParameterFromValueError {
 impl std::error::Error for EventCommandParameterFromValueError {}
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "type", content = "data")]
 pub enum EventCommandParameter {
+    #[serde(rename = "string")]
     String(String),
+    #[serde(rename = "int")]
     Int(i32),
+    #[serde(rename = "bool")]
     Bool(bool),
+    #[serde(rename = "nil")]
     Nil,
+    #[serde(rename = "string-array")]
     StringArray(Vec<String>),
+    #[serde(rename = "move-route")]
     MoveRoute(MoveRoute),
+    #[serde(rename = "move-command")]
     MoveCommand(MoveCommand),
+    #[serde(rename = "se")]
     Se(Se),
+    #[serde(rename = "tone")]
     Tone(Tone),
+    #[serde(rename = "color")]
     Color(Color),
+    #[serde(rename = "bgm")]
+    Bgm(Bgm),
+    #[serde(rename = "bgs")]
+    Bgs(Bgs),
+    #[serde(rename = "me")]
+    Me(Me),
 }
 
 impl<'a> FromValue<'a> for EventCommandParameter {
@@ -134,6 +154,18 @@ impl<'a> FromValue<'a> for EventCommandParameter {
                         let value = FromValue::from_value(ctx, value)?;
                         Ok(Self::Se(value))
                     }
+                    crate::bgm::OBJECT_NAME => {
+                        let value = FromValue::from_value(ctx, value)?;
+                        Ok(Self::Bgm(value))
+                    }
+                    crate::bgs::OBJECT_NAME => {
+                        let value = FromValue::from_value(ctx, value)?;
+                        Ok(Self::Bgs(value))
+                    }
+                    crate::me::OBJECT_NAME => {
+                        let value = FromValue::from_value(ctx, value)?;
+                        Ok(Self::Me(value))
+                    }
                     _ => Err(FromValueError::UnexpectedObjectName { name: name.into() }),
                 }
             }
@@ -184,6 +216,9 @@ impl IntoValue for EventCommandParameter {
             Self::Se(value) => value.into_value(arena),
             Self::Tone(value) => value.into_value(arena),
             Self::Color(value) => value.into_value(arena),
+            Self::Bgm(value) => value.into_value(arena),
+            Self::Bgs(value) => value.into_value(arena),
+            Self::Me(value) => value.into_value(arena),
         }
     }
 }

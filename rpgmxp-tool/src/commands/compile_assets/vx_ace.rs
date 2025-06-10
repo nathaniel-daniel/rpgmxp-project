@@ -1,4 +1,6 @@
 use super::generate_map_infos_data;
+use super::generate_ruby_data;
+use super::set_extension_str;
 use super::FileSink;
 use anyhow::bail;
 use anyhow::ensure;
@@ -95,6 +97,18 @@ pub fn compile(
         }
         ["Data", "MapInfos.rvdata2", ..] => {
             // Ignore entries, we explore them in the above branch.
+        }
+        ["Data", file] if crate::util::is_map_file_name(file, "json") => {
+            println!("packing \"{}\"", relative_path.display());
+
+            let map_data = generate_ruby_data::<rpgmvx_ace_types::Map>(entry_path)?;
+            let size = u32::try_from(map_data.len())?;
+
+            let renamed_file = set_extension_str(file, "rvdata2");
+            let mut relative_path_components = relative_path_components.clone();
+            *relative_path_components.last_mut().unwrap() = renamed_file.as_str();
+
+            file_sink.write_file(&relative_path_components, size, &*map_data)?;
         }
         relative_path_components if entry_file_type.is_file() => {
             // Copy file by default

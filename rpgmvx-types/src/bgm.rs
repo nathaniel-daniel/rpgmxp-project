@@ -1,3 +1,5 @@
+pub(crate) const OBJECT_NAME: &[u8] = b"RPG::BGM";
+
 #[derive(
     Debug,
     serde::Serialize,

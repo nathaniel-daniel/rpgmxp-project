@@ -1,4 +1,5 @@
 use super::extract_map_infos;
+use super::extract_ruby_data;
 use super::FileEntry;
 use super::Options;
 use anyhow::Context;
@@ -53,6 +54,11 @@ pub fn extract(
         }
         ["Data", "MapInfos.rvdata2"] if !options.skip_extract_map_infos => {
             extract_map_infos(entry, output_path)?;
+        }
+        ["Data", file]
+            if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rvdata2") =>
+        {
+            extract_ruby_data::<rpgmvx_ace_types::Map>(entry, output_path)?;
         }
         _ => {
             let temp_path = nd_util::with_push_extension(&output_path, "temp");
