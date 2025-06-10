@@ -26,8 +26,12 @@ The following objects can be deduped inside an archive:
  * String (what cases?)
  * MoveCommands
  
+VX Ace Archive creation is untested.
+String encoding for vx data types does not use encodings.
+ 
 ## Resources
  * https://github.com/selectivepaperclip/rpgm2renpy/blob/ff847ff9f9a00cabd6f6c894be4c72711d0c76fd/game/rpgm_constants.rpy
  * https://github.com/cstrahan/open-rpg-maker
  * https://www.rpg-maker.fr/dl/monos/aide/xp/index.html
  * https://www.rpg-maker.fr/dl/monos/aide/vx/index.html
+ * https://rpgmaker.fixato.org/Manual/RPGVXAce/rgss/

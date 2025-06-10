@@ -13,10 +13,12 @@ object = { version = "0.36.7", features = [ "pe", "read" ], default-features = f
 rgssad = { git = "https://github.com/nathaniel-daniel/rgssad-rs", version = "0.0.0" }
 rpgm-common-types = { version = "0.0.0", path = "../rpgm-common-types" }
 rpgmxp-types = { version = "0.0.0", path = "../rpgmxp-types" }
+rpgmvx-ace-types = { version = "0.0.0", path = "../rpgmvx-ace-types" }
 rpgmvx-types = { version = "0.0.0", path = "../rpgmvx-types" }
 ruby-marshal = { git = "https://github.com/nathaniel-daniel/ruby-marshal-rs", version = "0.0.0" }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 walkdir = "2.5.0"
 quick-xml = { version = "0.37.5", features = [ "serialize" ] }
+encoding_rs = "0.8.35"
 

@@ -1,4 +1,7 @@
 mod file_sink;
+mod vx;
+mod vx_ace;
+mod xp;
 
 use self::file_sink::FileSink;
 use crate::util::ArrayLikeElement;
@@ -6,34 +9,31 @@ use crate::GameKind;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
-use rpgmxp_types::Actor;
-use rpgmxp_types::Animation;
-use rpgmxp_types::Armor;
-use rpgmxp_types::Class;
-use rpgmxp_types::CommonEvent;
-use rpgmxp_types::Enemy;
-use rpgmxp_types::Item;
-use rpgmxp_types::Script;
-use rpgmxp_types::ScriptList;
-use rpgmxp_types::Skill;
-use rpgmxp_types::State;
-use rpgmxp_types::Tileset;
-use rpgmxp_types::Troop;
-use rpgmxp_types::Weapon;
+use rpgm_common_types::Script;
+use rpgm_common_types::ScriptList;
 use ruby_marshal::IntoValue;
 use std::collections::BTreeMap;
-use std::fs::File;
 use std::path::Component as PathComponent;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use walkdir::WalkDir;
 
+fn set_extension_str(input: &str, extension: &str) -> String {
+    let stem = input
+        .rsplit_once('.')
+        .map(|(stem, _extension)| stem)
+        .unwrap_or(input);
+
+    format!("{stem}.{extension}")
+}
+
 #[derive(Debug)]
 enum Format {
     Dir,
     Rgssad,
     Rgss2a,
+    Rgss3a,
 }
 
 impl FromStr for Format {
@@ -44,410 +44,27 @@ impl FromStr for Format {
             "dir" => Ok(Self::Dir),
             "rgssad" => Ok(Self::Rgssad),
             "rgss2a" => Ok(Self::Rgss2a),
+            "rgss3a" => Ok(Self::Rgss3a),
             _ => bail!("unknown format \"{input}\""),
         }
     }
 }
 
-#[derive(Debug, argh::FromArgs)]
-#[argh(
-    subcommand,
-    name = "compile-assets",
-    description = "recompile extracted assets from a folder"
-)]
-pub struct Options {
-    #[argh(positional, description = "the input folder path to compile")]
-    input: PathBuf,
-
-    #[argh(positional, description = "the output path")]
-    output: PathBuf,
-
-    #[argh(
-        option,
-        long = "format",
-        short = 'f',
-        description = "the output format. Defaults to detecting from the extension. Otherwise, \"dir\" is used."
-    )]
-    format: Option<Format>,
-
-    #[argh(
-        option,
-        long = "game",
-        short = 'g',
-        description = "the game type. Defaults to detecting from the output format. Must be provided if the output format is a dir."
-    )]
-    game: Option<GameKind>,
-
-    #[argh(
-        switch,
-        long = "overwrite",
-        description = "whether overwrite the output if it exists"
-    )]
-    pub overwrite: bool,
-}
-
-pub fn exec(mut options: Options) -> anyhow::Result<()> {
-    options.input = options
-        .input
-        .canonicalize()
-        .context("failed to canonicalize input path")?;
-
-    let format = match options.format {
-        Some(format) => format,
-        None => {
-            let extension = options
-                .output
-                .extension()
-                .map(|extension| extension.to_str().context("non-unicode extension"))
-                .transpose()?;
-            if extension == Some("rgssad") {
-                Format::Rgssad
-            } else if extension == Some("rgss2a") {
-                Format::Rgss2a
-            } else {
-                Format::Dir
-            }
-        }
-    };
-
-    let mut file_sink = match format {
-        Format::Dir => FileSink::new_dir(&options.output, options.overwrite)?,
-        Format::Rgssad | Format::Rgss2a => {
-            FileSink::new_rgssad(&options.output, options.overwrite)?
-        }
-    };
-    let game_kind = options.game.map(Ok).unwrap_or_else(|| match format {
-        Format::Dir => {
-            bail!("need to provide game type with --game flag when outputting to a dir.")
-        }
-        Format::Rgssad => Ok(GameKind::Xp),
-        Format::Rgss2a => Ok(GameKind::Vx),
-    })?;
-
-    for entry in WalkDir::new(&options.input) {
-        let entry = entry?;
-        let entry_file_type = entry.file_type();
-        let entry_path = entry.path();
-
-        let relative_path = entry_path.strip_prefix(&options.input)?;
-        let relative_path_components = relative_path
-            .components()
-            .map(|component| match component {
-                PathComponent::Normal(value) => value.to_str().context("non-unicode path"),
-                component => bail!("unexpected path component \"{component:?}\""),
-            })
-            .collect::<anyhow::Result<Vec<_>>>()?;
-
-        match game_kind {
-            GameKind::Xp => compile_xp(
-                entry_path,
-                entry_file_type,
-                relative_path,
-                relative_path_components,
-                &mut file_sink,
-            )?,
-            GameKind::Vx => compile_vx(
-                entry_path,
-                entry_file_type,
-                relative_path,
-                relative_path_components,
-                &mut file_sink,
-            )?,
-        }
-    }
-
-    file_sink.finish()?;
-
-    Ok(())
-}
-
-fn compile_xp(
-    entry_path: &Path,
-    entry_file_type: std::fs::FileType,
-    relative_path: &Path,
-    relative_path_components: Vec<&str>,
-    file_sink: &mut FileSink,
-) -> anyhow::Result<()> {
-    match relative_path_components.as_slice() {
-        ["Data", "Scripts.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let scripts_data = generate_scripts_data(entry_path)?;
-            let size = u32::try_from(scripts_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*scripts_data)?;
-        }
-        ["Data", "Scripts.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "CommonEvents.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let rx_data = generate_arraylike_rx_data::<CommonEvent>(entry_path)?;
-            let size = u32::try_from(rx_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-        }
-        ["Data", "CommonEvents.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "Actors.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let rx_data = generate_arraylike_rx_data::<Actor>(entry_path)?;
-            let size = u32::try_from(rx_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-        }
-        ["Data", "Actors.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "Weapons.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let rx_data = generate_arraylike_rx_data::<Weapon>(entry_path)?;
-            let size = u32::try_from(rx_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-        }
-        ["Data", "Weapons.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "Armors.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let rx_data = generate_arraylike_rx_data::<Armor>(entry_path)?;
-            let size = u32::try_from(rx_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-        }
-        ["Data", "Armors.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "Skills.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let rx_data = generate_arraylike_rx_data::<Skill>(entry_path)?;
-            let size = u32::try_from(rx_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-        }
-        ["Data", "Skills.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "States.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let rx_data = generate_arraylike_rx_data::<State>(entry_path)?;
-            let size = u32::try_from(rx_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-        }
-        ["Data", "States.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "Items.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let rx_data = generate_arraylike_rx_data::<Item>(entry_path)?;
-            let size = u32::try_from(rx_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-        }
-        ["Data", "Items.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "Enemies.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let rx_data = generate_arraylike_rx_data::<Enemy>(entry_path)?;
-            let size = u32::try_from(rx_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-        }
-        ["Data", "Enemies.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "Classes.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let rx_data = generate_arraylike_rx_data::<Class>(entry_path)?;
-            let size = u32::try_from(rx_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-        }
-        ["Data", "Classes.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "Troops.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let rx_data = generate_arraylike_rx_data::<Troop>(entry_path)?;
-            let size = u32::try_from(rx_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-        }
-        ["Data", "Troops.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "Tilesets.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let rx_data = generate_arraylike_rx_data::<Tileset>(entry_path)?;
-            let size = u32::try_from(rx_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-        }
-        ["Data", "Tilesets.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "MapInfos.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let rx_data = generate_map_infos_data(entry_path)?;
-            let size = u32::try_from(rx_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-        }
-        ["Data", "MapInfos.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "System.json"] if entry_file_type.is_file() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let data = generate_ruby_data::<rpgmxp_types::System>(entry_path)?;
-            let size = u32::try_from(data.len())?;
-
-            let mut relative_path_components = relative_path_components.clone();
-            *relative_path_components.last_mut().unwrap() = "System.rxdata";
-
-            file_sink.write_file(&relative_path_components, size, &*data)?;
-        }
-        ["Data", "Animations.rxdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let rx_data = generate_arraylike_rx_data::<Animation>(entry_path)?;
-            let size = u32::try_from(rx_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*rx_data)?;
-        }
-        ["Data", "Animations.rxdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", file] if crate::util::is_map_file_name(file, "json") => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let map_data = generate_ruby_data::<rpgmxp_types::Map>(entry_path)?;
-            let size = u32::try_from(map_data.len())?;
-
-            let renamed_file = set_extension_str(file, "rxdata");
-            let mut relative_path_components = relative_path_components.clone();
-            *relative_path_components.last_mut().unwrap() = renamed_file.as_str();
-
-            file_sink.write_file(&relative_path_components, size, &*map_data)?;
-        }
-        relative_path_components if entry_file_type.is_file() => {
-            // Copy file by default
-            println!("packing \"{}\"", relative_path.display());
-
-            let input_file = File::open(entry_path).with_context(|| {
-                format!(
-                    "failed to open input file from \"{}\"",
-                    entry_path.display()
-                )
-            })?;
-            let metadata = input_file.metadata()?;
-            let size = u32::try_from(metadata.len())?;
-
-            file_sink.write_file(relative_path_components, size, input_file)?;
-        }
-        _ => {}
-    }
-
-    Ok(())
-}
-
-fn compile_vx(
-    entry_path: &Path,
-    entry_file_type: std::fs::FileType,
-    relative_path: &Path,
-    relative_path_components: Vec<&str>,
-    file_sink: &mut FileSink,
-) -> anyhow::Result<()> {
-    match relative_path_components.as_slice() {
-        ["Data", "Scripts.rvdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let scripts_data = generate_scripts_data(entry_path)?;
-            let size = u32::try_from(scripts_data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*scripts_data)?;
-        }
-        ["Data", "Scripts.rvdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "MapInfos.rvdata"] if entry_file_type.is_dir() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let data = generate_map_infos_data(entry_path)?;
-            let size = u32::try_from(data.len())?;
-
-            file_sink.write_file(&relative_path_components, size, &*data)?;
-        }
-        ["Data", "MapInfos.rvdata", ..] => {
-            // Ignore entries, we explore them in the above branch.
-        }
-        ["Data", "System.json"] if entry_file_type.is_file() => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let data = generate_ruby_data::<rpgmvx_types::System>(entry_path)?;
-            let size = u32::try_from(data.len())?;
-
-            let mut relative_path_components = relative_path_components.clone();
-            *relative_path_components.last_mut().unwrap() = "System.rvdata";
-
-            file_sink.write_file(&relative_path_components, size, &*data)?;
-        }
-        ["Data", file] if crate::util::is_map_file_name(file, "json") => {
-            println!("packing \"{}\"", relative_path.display());
-
-            let map_data = generate_ruby_data::<rpgmvx_types::Map>(entry_path)?;
-            let size = u32::try_from(map_data.len())?;
-
-            let renamed_file = set_extension_str(file, "rvdata");
-            let mut relative_path_components = relative_path_components.clone();
-            *relative_path_components.last_mut().unwrap() = renamed_file.as_str();
-
-            file_sink.write_file(&relative_path_components, size, &*map_data)?;
-        }
-        relative_path_components if entry_file_type.is_file() => {
-            // Copy file by default
-            println!("packing \"{}\"", relative_path.display());
-
-            let input_file = File::open(entry_path).with_context(|| {
-                format!(
-                    "failed to open input file from \"{}\"",
-                    entry_path.display()
-                )
-            })?;
-            let metadata = input_file.metadata()?;
-            let size = u32::try_from(metadata.len())?;
-
-            file_sink.write_file(relative_path_components, size, input_file)?;
-        }
-        _ => {}
-    }
-
-    Ok(())
-}
-
-fn set_extension_str(input: &str, extension: &str) -> String {
-    let stem = input
-        .rsplit_once('.')
-        .map(|(stem, _extension)| stem)
-        .unwrap_or(input);
-
-    format!("{stem}.{extension}")
+fn generate_ruby_data<T>(path: &Path) -> anyhow::Result<Vec<u8>>
+where
+    T: serde::de::DeserializeOwned + ruby_marshal::IntoValue,
+{
+    let map = std::fs::read_to_string(path)?;
+    let map: T = serde_json::from_str(&map)?;
+
+    let mut arena = ruby_marshal::ValueArena::new();
+    let handle = map.into_value(&mut arena)?;
+    arena.replace_root(handle);
+
+    let mut data = Vec::new();
+    ruby_marshal::dump(&mut data, &arena)?;
+
+    Ok(data)
 }
 
 fn generate_scripts_data(path: &Path) -> anyhow::Result<Vec<u8>> {
@@ -612,19 +229,124 @@ fn generate_map_infos_data(path: &Path) -> anyhow::Result<Vec<u8>> {
     Ok(data)
 }
 
-fn generate_ruby_data<T>(path: &Path) -> anyhow::Result<Vec<u8>>
-where
-    T: serde::de::DeserializeOwned + ruby_marshal::IntoValue,
-{
-    let map = std::fs::read_to_string(path)?;
-    let map: T = serde_json::from_str(&map)?;
+#[derive(Debug, argh::FromArgs)]
+#[argh(
+    subcommand,
+    name = "compile-assets",
+    description = "recompile extracted assets from a folder"
+)]
+pub struct Options {
+    #[argh(positional, description = "the input folder path to compile")]
+    input: PathBuf,
 
-    let mut arena = ruby_marshal::ValueArena::new();
-    let handle = map.into_value(&mut arena)?;
-    arena.replace_root(handle);
+    #[argh(positional, description = "the output path")]
+    output: PathBuf,
 
-    let mut data = Vec::new();
-    ruby_marshal::dump(&mut data, &arena)?;
+    #[argh(
+        option,
+        long = "format",
+        short = 'f',
+        description = "the output format. Defaults to detecting from the extension. Otherwise, \"dir\" is used."
+    )]
+    format: Option<Format>,
 
-    Ok(data)
+    #[argh(
+        option,
+        long = "game",
+        short = 'g',
+        description = "the game type. Defaults to detecting from the output format. Must be provided if the output format is a dir."
+    )]
+    game: Option<GameKind>,
+
+    #[argh(
+        switch,
+        long = "overwrite",
+        description = "whether overwrite the output if it exists"
+    )]
+    pub overwrite: bool,
+}
+
+pub fn exec(mut options: Options) -> anyhow::Result<()> {
+    options.input = options
+        .input
+        .canonicalize()
+        .context("failed to canonicalize input path")?;
+
+    let format = match options.format {
+        Some(format) => format,
+        None => {
+            let extension = options
+                .output
+                .extension()
+                .map(|extension| extension.to_str().context("non-unicode extension"))
+                .transpose()?;
+            if extension == Some("rgssad") {
+                Format::Rgssad
+            } else if extension == Some("rgss2a") {
+                Format::Rgss2a
+            } else if extension == Some("rgss3a") {
+                Format::Rgss3a
+            } else {
+                Format::Dir
+            }
+        }
+    };
+
+    let mut file_sink = match format {
+        Format::Dir => FileSink::new_dir(&options.output, options.overwrite)?,
+        Format::Rgssad | Format::Rgss2a | Format::Rgss3a => {
+            FileSink::new_rgssad(&options.output, options.overwrite)?
+        }
+    };
+    let game_kind = options.game.map(Ok).unwrap_or_else(|| match format {
+        Format::Dir => {
+            bail!("need to provide game type with --game flag when outputting to a dir.")
+        }
+        Format::Rgssad => Ok(GameKind::Xp),
+        Format::Rgss2a => Ok(GameKind::Vx),
+        Format::Rgss3a => Ok(GameKind::VxAce),
+    })?;
+
+    for entry in WalkDir::new(&options.input) {
+        let entry = entry?;
+        let entry_file_type = entry.file_type();
+        let entry_path = entry.path();
+
+        let relative_path = entry_path.strip_prefix(&options.input)?;
+        let relative_path_components = relative_path
+            .components()
+            .map(|component| match component {
+                PathComponent::Normal(value) => value.to_str().context("non-unicode path"),
+                component => bail!("unexpected path component \"{component:?}\""),
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+
+        match game_kind {
+            GameKind::Xp => self::xp::compile(
+                entry_path,
+                entry_file_type,
+                relative_path,
+                relative_path_components,
+                &mut file_sink,
+            )?,
+            GameKind::Vx => self::vx::compile(
+                entry_path,
+                entry_file_type,
+                relative_path,
+                relative_path_components,
+                &mut file_sink,
+            )?,
+            GameKind::VxAce => self::vx_ace::compile(
+                entry_path,
+                entry_file_type,
+                relative_path,
+                relative_path_components,
+                &mut file_sink,
+            )?,
+        }
+    }
+
+    file_sink.finish()?;
+
+    Ok(())
 }

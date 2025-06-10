@@ -1,4 +1,7 @@
 mod file_entry_iter;
+mod vx;
+mod vx_ace;
+mod xp;
 
 use self::file_entry_iter::FileEntry;
 use self::file_entry_iter::FileEntryIter;
@@ -8,24 +11,148 @@ use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
 use camino::Utf8Path;
-use rpgmxp_types::Actor;
-use rpgmxp_types::Animation;
-use rpgmxp_types::Armor;
-use rpgmxp_types::Class;
-use rpgmxp_types::CommonEvent;
-use rpgmxp_types::Enemy;
-use rpgmxp_types::Item;
-use rpgmxp_types::Skill;
-use rpgmxp_types::State;
-use rpgmxp_types::Tileset;
-use rpgmxp_types::Troop;
-use rpgmxp_types::Weapon;
 use ruby_marshal::FromValueContext;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+
+fn extract_ruby_data<T>(file: impl std::io::Read, path: impl AsRef<Path>) -> anyhow::Result<()>
+where
+    T: serde::Serialize + for<'a> ruby_marshal::FromValue<'a>,
+{
+    let path = path.as_ref();
+    let path = path.with_extension("json");
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let data: T = ctx.from_value(arena.root())?;
+
+    // TODO: Lock?
+    // TODO: Drop delete guard for file?
+    let temp_path = nd_util::with_push_extension(&path, "temp");
+    let mut file = File::create_new(&temp_path)?;
+    serde_json::to_writer_pretty(&mut file, &data)?;
+    file.flush()?;
+    file.sync_all()?;
+    std::fs::rename(temp_path, path)?;
+
+    Ok(())
+}
+
+fn extract_arraylike<T>(file: impl std::io::Read, dir_path: impl AsRef<Path>) -> anyhow::Result<()>
+where
+    T: for<'a> ArrayLikeElement<'a>,
+{
+    let dir_path = dir_path.as_ref();
+    let type_display_name = T::type_display_name();
+
+    std::fs::create_dir_all(dir_path)?;
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let array: Vec<Option<T>> = ctx.from_value(arena.root())?;
+
+    for (index, value) in array.iter().enumerate() {
+        if index == 0 {
+            ensure!(value.is_none(), "{type_display_name} 0 should be nil");
+            continue;
+        }
+
+        let value = value
+            .as_ref()
+            .with_context(|| format!("{type_display_name} is nil"))?;
+
+        println!("  extracting {} \"{}\"", type_display_name, value.name());
+
+        let name = value.name();
+        let file_name = format!("{index:03}-{name}.json");
+        let file_name = crate::util::percent_escape_file_name(file_name.as_str());
+        let out_path = dir_path.join(file_name);
+        let temp_path = nd_util::with_push_extension(&out_path, "temp");
+
+        // TODO: Lock?
+        // TODO: Drop delete guard for file?
+        let mut output_file = File::create_new(&temp_path)?;
+        serde_json::to_writer_pretty(&mut output_file, value)?;
+        output_file.flush()?;
+        output_file.sync_all()?;
+        drop(output_file);
+
+        std::fs::rename(temp_path, out_path)?;
+    }
+
+    Ok(())
+}
+
+fn extract_scripts<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let dir_path = dir_path.as_ref();
+    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
+
+    // TODO: Lock?
+    // TODO: Drop delete guard for file?
+    std::fs::create_dir_all(&temp_dir_path)?;
+
+    let arena = ruby_marshal::load(file).context("failed to load ruby data")?;
+    let ctx = FromValueContext::new(&arena);
+    let script_list: rpgm_common_types::ScriptList = ctx.from_value(arena.root())?;
+
+    for (script_index, script) in script_list.scripts.iter().enumerate() {
+        println!("  extracting script \"{}\"", script.name);
+
+        let escaped_script_name = crate::util::percent_escape_file_name(&script.name);
+
+        let out_path = temp_dir_path.join(format!("{script_index:03}-{escaped_script_name}.rb"));
+        let temp_path = nd_util::with_push_extension(&out_path, "temp");
+
+        // TODO: Lock?
+        // TODO: Drop delete guard for file?
+        std::fs::write(&temp_path, &script.data)?;
+        std::fs::rename(temp_path, out_path)?;
+    }
+
+    std::fs::rename(temp_dir_path, dir_path)?;
+
+    Ok(())
+}
+
+fn extract_map_infos<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
+where
+    P: AsRef<Path>,
+{
+    let dir_path = dir_path.as_ref();
+
+    std::fs::create_dir_all(dir_path)?;
+
+    let arena = ruby_marshal::load(file)?;
+    let ctx = FromValueContext::new(&arena);
+    let map: BTreeMap<i32, rpgm_common_types::MapInfo> = ctx.from_value(arena.root())?;
+
+    for (index, value) in map.iter() {
+        let name = value.name.as_str();
+
+        println!("  extracting map info \"{name}\"");
+
+        let out_path = dir_path.join(format!("{index:03}-{name}.json"));
+        let temp_path = nd_util::with_push_extension(&out_path, "temp");
+
+        // TODO: Lock?
+        // TODO: Drop delete guard for file?
+        let mut output_file = File::create_new(&temp_path)?;
+        serde_json::to_writer_pretty(&mut output_file, value)?;
+        output_file.flush()?;
+        output_file.sync_all()?;
+        drop(output_file);
+
+        std::fs::rename(temp_path, out_path)?;
+    }
+
+    Ok(())
+}
 
 #[derive(Debug, argh::FromArgs)]
 #[argh(
@@ -208,119 +335,14 @@ pub fn exec(mut options: Options) -> anyhow::Result<()> {
 
         match game_kind {
             GameKind::Xp => {
-                extract_xp(&options, &mut entry, relative_path_components, output_path)?
+                self::xp::extract(&options, &mut entry, relative_path_components, output_path)?
             }
             GameKind::Vx => {
-                extract_vx(&options, &mut entry, relative_path_components, output_path)?
+                self::vx::extract(&options, &mut entry, relative_path_components, output_path)?
             }
-        }
-    }
-
-    Ok(())
-}
-
-fn extract_xp(
-    options: &Options,
-    entry: &mut FileEntry<'_>,
-    relative_path_components: Vec<&str>,
-    output_path: PathBuf,
-) -> anyhow::Result<()> {
-    match relative_path_components.as_slice() {
-        ["Data", "Scripts.rxdata"] if !options.skip_extract_scripts => {
-            extract_scripts(entry, output_path)?;
-        }
-        ["Data", "CommonEvents.rxdata"] if !options.skip_extract_common_events => {
-            extract_arraylike::<CommonEvent>(entry, output_path)?;
-        }
-        ["Data", "Actors.rxdata"] if !options.skip_extract_actors => {
-            extract_arraylike::<Actor>(entry, output_path)?;
-        }
-        ["Data", "Weapons.rxdata"] if !options.skip_extract_weapons => {
-            extract_arraylike::<Weapon>(entry, output_path)?;
-        }
-        ["Data", "Armors.rxdata"] if !options.skip_extract_armors => {
-            extract_arraylike::<Armor>(entry, output_path)?;
-        }
-        ["Data", "Skills.rxdata"] if !options.skip_extract_skills => {
-            extract_arraylike::<Skill>(entry, output_path)?;
-        }
-        ["Data", "States.rxdata"] if !options.skip_extract_states => {
-            extract_arraylike::<State>(entry, output_path)?;
-        }
-        ["Data", "Items.rxdata"] if !options.skip_extract_items => {
-            extract_arraylike::<Item>(entry, output_path)?;
-        }
-        ["Data", "Enemies.rxdata"] if !options.skip_extract_enemies => {
-            extract_arraylike::<Enemy>(entry, output_path)?;
-        }
-        ["Data", "Classes.rxdata"] if !options.skip_extract_classes => {
-            extract_arraylike::<Class>(entry, output_path)?;
-        }
-        ["Data", "Troops.rxdata"] if !options.skip_extract_troops => {
-            extract_arraylike::<Troop>(entry, output_path)?;
-        }
-        ["Data", "Tilesets.rxdata"] if !options.skip_extract_tilesets => {
-            extract_arraylike::<Tileset>(entry, output_path)?;
-        }
-        ["Data", "MapInfos.rxdata"] if !options.skip_extract_map_infos => {
-            extract_map_infos(entry, output_path)?;
-        }
-        ["Data", "System.rxdata"] if !options.skip_extract_system => {
-            extract_ruby_data::<rpgmxp_types::System>(entry, output_path)?;
-        }
-        ["Data", "Animations.rxdata"] if !options.skip_extract_animations => {
-            extract_arraylike::<Animation>(entry, output_path)?;
-        }
-        ["Data", file]
-            if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rxdata") =>
-        {
-            extract_ruby_data::<rpgmxp_types::Map>(entry, output_path)?;
-        }
-        _ => {
-            let temp_path = nd_util::with_push_extension(&output_path, "temp");
-            // TODO: Lock?
-            // TODO: Drop delete guard for file?
-            let mut output_file = File::create(&temp_path)
-                .with_context(|| format!("failed to open file at \"{}\"", output_path.display()))?;
-
-            std::io::copy(entry, &mut output_file)?;
-            std::fs::rename(&temp_path, &output_path)?;
-        }
-    }
-
-    Ok(())
-}
-
-fn extract_vx(
-    options: &Options,
-    entry: &mut FileEntry<'_>,
-    relative_path_components: Vec<&str>,
-    output_path: PathBuf,
-) -> anyhow::Result<()> {
-    match relative_path_components.as_slice() {
-        ["Data", "Scripts.rvdata"] if !options.skip_extract_scripts => {
-            extract_scripts(entry, output_path)?;
-        }
-        ["Data", "MapInfos.rvdata"] if !options.skip_extract_map_infos => {
-            extract_map_infos(entry, output_path)?;
-        }
-        ["Data", "System.rvdata"] if !options.skip_extract_system => {
-            extract_ruby_data::<rpgmvx_types::System>(entry, output_path)?;
-        }
-        ["Data", file]
-            if !options.skip_extract_maps && crate::util::is_map_file_name(file, "rvdata") =>
-        {
-            extract_ruby_data::<rpgmvx_types::Map>(entry, output_path)?;
-        }
-        _ => {
-            let temp_path = nd_util::with_push_extension(&output_path, "temp");
-            // TODO: Lock?
-            // TODO: Drop delete guard for file?
-            let mut output_file = File::create(&temp_path)
-                .with_context(|| format!("failed to open file at \"{}\"", output_path.display()))?;
-
-            std::io::copy(entry, &mut output_file)?;
-            std::fs::rename(&temp_path, &output_path)?;
+            GameKind::VxAce => {
+                self::vx_ace::extract(&options, &mut entry, relative_path_components, output_path)?
+            }
         }
     }
 
@@ -358,140 +380,4 @@ fn parse_relative_path(path: &Utf8Path) -> anyhow::Result<Vec<&str>> {
     }
 
     Ok(components)
-}
-
-fn extract_scripts<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
-where
-    P: AsRef<Path>,
-{
-    let dir_path = dir_path.as_ref();
-    let temp_dir_path = nd_util::with_push_extension(dir_path, "temp");
-
-    // TODO: Lock?
-    // TODO: Drop delete guard for file?
-    std::fs::create_dir_all(&temp_dir_path)?;
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let script_list: rpgm_common_types::ScriptList = ctx.from_value(arena.root())?;
-
-    for (script_index, script) in script_list.scripts.iter().enumerate() {
-        println!("  extracting script \"{}\"", script.name);
-
-        let escaped_script_name = crate::util::percent_escape_file_name(&script.name);
-
-        let out_path = temp_dir_path.join(format!("{script_index:03}-{escaped_script_name}.rb"));
-        let temp_path = nd_util::with_push_extension(&out_path, "temp");
-
-        // TODO: Lock?
-        // TODO: Drop delete guard for file?
-        std::fs::write(&temp_path, &script.data)?;
-        std::fs::rename(temp_path, out_path)?;
-    }
-
-    std::fs::rename(temp_dir_path, dir_path)?;
-
-    Ok(())
-}
-
-fn extract_arraylike<T>(file: impl std::io::Read, dir_path: impl AsRef<Path>) -> anyhow::Result<()>
-where
-    T: for<'a> ArrayLikeElement<'a>,
-{
-    let dir_path = dir_path.as_ref();
-    let type_display_name = T::type_display_name();
-
-    std::fs::create_dir_all(dir_path)?;
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let array: Vec<Option<T>> = ctx.from_value(arena.root())?;
-
-    for (index, value) in array.iter().enumerate() {
-        if index == 0 {
-            ensure!(value.is_none(), "{type_display_name} 0 should be nil");
-            continue;
-        }
-
-        let value = value
-            .as_ref()
-            .with_context(|| format!("{type_display_name} is nil"))?;
-
-        println!("  extracting {} \"{}\"", type_display_name, value.name());
-
-        let name = value.name();
-        let file_name = format!("{index:03}-{name}.json");
-        let file_name = crate::util::percent_escape_file_name(file_name.as_str());
-        let out_path = dir_path.join(file_name);
-        let temp_path = nd_util::with_push_extension(&out_path, "temp");
-
-        // TODO: Lock?
-        // TODO: Drop delete guard for file?
-        let mut output_file = File::create_new(&temp_path)?;
-        serde_json::to_writer_pretty(&mut output_file, value)?;
-        output_file.flush()?;
-        output_file.sync_all()?;
-        drop(output_file);
-
-        std::fs::rename(temp_path, out_path)?;
-    }
-
-    Ok(())
-}
-
-fn extract_map_infos<P>(file: impl std::io::Read, dir_path: P) -> anyhow::Result<()>
-where
-    P: AsRef<Path>,
-{
-    let dir_path = dir_path.as_ref();
-
-    std::fs::create_dir_all(dir_path)?;
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let map: BTreeMap<i32, rpgm_common_types::MapInfo> = ctx.from_value(arena.root())?;
-
-    for (index, value) in map.iter() {
-        let name = value.name.as_str();
-
-        println!("  extracting map info \"{name}\"");
-
-        let out_path = dir_path.join(format!("{index:03}-{name}.json"));
-        let temp_path = nd_util::with_push_extension(&out_path, "temp");
-
-        // TODO: Lock?
-        // TODO: Drop delete guard for file?
-        let mut output_file = File::create_new(&temp_path)?;
-        serde_json::to_writer_pretty(&mut output_file, value)?;
-        output_file.flush()?;
-        output_file.sync_all()?;
-        drop(output_file);
-
-        std::fs::rename(temp_path, out_path)?;
-    }
-
-    Ok(())
-}
-
-fn extract_ruby_data<T>(file: impl std::io::Read, path: impl AsRef<Path>) -> anyhow::Result<()>
-where
-    T: serde::Serialize + for<'a> ruby_marshal::FromValue<'a>,
-{
-    let path = path.as_ref();
-    let path = path.with_extension("json");
-
-    let arena = ruby_marshal::load(file)?;
-    let ctx = FromValueContext::new(&arena);
-    let data: T = ctx.from_value(arena.root())?;
-
-    // TODO: Lock?
-    // TODO: Drop delete guard for file?
-    let temp_path = nd_util::with_push_extension(&path, "temp");
-    let mut file = File::create_new(&temp_path)?;
-    serde_json::to_writer_pretty(&mut file, &data)?;
-    file.flush()?;
-    file.sync_all()?;
-    std::fs::rename(temp_path, path)?;
-
-    Ok(())
 }
