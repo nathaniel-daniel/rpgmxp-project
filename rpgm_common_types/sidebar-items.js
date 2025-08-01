@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["color","map_info","script","system_test_battler","table","tone","util"]};
